@@ -3,3 +3,6 @@ out
 mandelbrot.iml
 
 .idea
+
+project/target
+project/project/target
