@@ -1,5 +1,6 @@
 package eddie
 
+
 case class Complex(real: Double, imaginary: Double) {
   def outOfBounds: Boolean = Math.abs(real) > 2 || Math.abs(imaginary) > 2
 
