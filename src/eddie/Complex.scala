@@ -29,19 +29,15 @@ class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1,
   val iSize = iMax - iMin
   val pixelsPerUnit = rPixels / rSize
   val iPixels = pixelsPerUnit * iSize
-  println(pixelsPerUnit)
-  println(rSize)
-
-  def pixels(size: Double, offset: Double): Seq[Double] =
-    1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
+  val totalPixels = rPixels * iPixels
 
   val column = pixels(iSize, iMin)
   val row = pixels(rSize, rMin)
 
   val grid = column.map { yVal => row.map(Complex(_, yVal)) }.reverse
-  println(grid.size)
-  println(grid.head.size)
 
+  private def pixels(size: Double, offset: Double): Seq[Double] =
+    1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
 
   def toImage2(f: Complex => Boolean): Image = {
     grid.map { rows =>
@@ -51,23 +47,27 @@ class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1,
       }.foldLeft(Image.empty)(_.beside(_))
     }.foldLeft(Image.empty)(_.above(_))
   }
-//
-//  def toImage(f: Complex => Boolean): Image = {
-//    grid.foldLeft(Empty: Image) { (i, row) =>
-//      println("a")
-//      i.above {
-//        row.foldLeft(i) { (iRow, c) =>
-//          println(".")
-//          val color = if (f(c)) Color.black else Color.white
-//          val image = Image.rectangle(30, 30).fillColor(color)
-//          iRow.beside(image)
-//        }
-//      }
-//    }
-//  }
 
-  def display(f: Complex => Boolean) =
-    grid.map(_.map(c => if (f(c)) "x" else " ")).foreach(d => println(d.mkString))
+  def escapeBoundIterCounts(f: Complex => Int): Map[Int, Double] = {
+    grid.flatMap { rows => rows.map(f) }.groupBy(identity).mapValues(_.size / totalPixels)
+  }
+
+  def toImage(f: Complex => Boolean): Image = {
+    grid.foldLeft(Empty: Image) { (i, row) =>
+      println("a")
+      i.above {
+        row.foldLeft(i) { (iRow, c) =>
+          println(".")
+          val color = if (f(c)) Color.black else Color.white
+          val image = Image.rectangle(30, 30).fillColor(color)
+          iRow.beside(image)
+        }
+      }
+    }
+  }
+
+//  def display(f: Complex => Boolean) =
+//    grid.map(_.map(c => if (f(c)) "x" else " ")).foreach(d => println(d.mkString))
 }
 
 object Mandelbrot extends App {
@@ -76,27 +76,18 @@ object Mandelbrot extends App {
   def bounded(c: Complex, z: Complex = Complex.zero, count: Int = 0): Boolean =
     count >= 1000 || (!z.outOfBounds && bounded(c, f(z, c), count + 1))
 
-  val blackSquare = Image.rectangle(30, 30).fillColor(Color.lightBlue)
-  val redSquare = Image.rectangle(30, 30).fillColor(Color.purple)
+  def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Int = {
+    if (count >= 1000 || z.outOfBounds) {
+      count
+    } else {
+      boundedCount(c, f(z, c), count + 1)
+    }
+  }
 
-  // A chessboard, broken into steps showing the recursive construction
-  val twoByTwo =
-    (redSquare.beside(blackSquare))
-      .above(blackSquare.beside(redSquare))
-
-  val fourByFour =
-    (twoByTwo.beside(twoByTwo))
-      .above(twoByTwo.beside(twoByTwo))
-
-  val chessboard =
-    (fourByFour.beside(fourByFour))
-      .above(fourByFour.beside(fourByFour))
-
-  chessboard.write[Png]("/Users/eddie.carlson/developer/eddie/mandelbrot/chess.png")
-
-  val i = new Grid(600).toImage2(bounded(_))
-  println("out")
-  i.write[Png]("/Users/eddie.carlson/developer/eddie/mandelbrot/test6.png")
+//  val i = new Grid(600).toImage2(bounded(_))
+  println(new Grid(600).escapeBoundIterCounts(boundedCount(_)).toList.sortBy(_._2).reverse)
+//  println("out")
+//  i.write[Png]("/Users/eddie.carlson/developer/eddie/mandelbrot/test6.png")
 //  new Grid(500, -.8, -.7, .1, .2).display(bounded(_))
 //  new Grid(500, -.75, -.725, .125, .175).display(bounded(_))
 }
