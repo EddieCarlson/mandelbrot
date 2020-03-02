@@ -1,8 +1,11 @@
 package eddie
 
-import doodle.image._
-import doodle.core._
-import doodle.image.Image.Elements.Empty
+import java.awt.Component
+import java.awt.Color
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.util.Random
+
 
 case class Complex(real: Double, imaginary: Double) {
   def outOfBounds: Boolean = Math.abs(real) > 2 || Math.abs(imaginary) > 2
@@ -37,7 +40,16 @@ class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1,
     }
   }.reverse
 
-  grid.map(x => println(x))
+//  grid.map(x => println(x.map { case (c, _) => toChar(c, Mandelbrot.bounded)}.mkString("")))
+  grid.map(x => println(x.map { case (_, ee) => ee.toString}.mkString("")))
+
+  def toChar(c: Complex, f: (Complex, Complex, Int) => Boolean) = {
+    if (f(c, Complex.zero, 0)) {
+      "x"
+    } else {
+      " "
+    }
+  }
 
   private def pixels(size: Double, offset: Double): Seq[Double] =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
@@ -87,7 +99,7 @@ object Mandelbrot extends App {
     }
   }
 
-  new Grid(6)
+  new Grid(10)
 //  val i = new Grid(600).toImage2(bounded(_))
 //  println(new Grid(600).escapeBoundIterCounts(boundedCount(_)).toList.sortBy(_._2).reverse)
 //  println("out")
