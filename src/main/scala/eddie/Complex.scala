@@ -92,6 +92,37 @@ class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double =
 //    grid.map(_.map(c => if (f(c)) "x" else " ")).foreach(d => println(d.mkString))
 }
 
+object MyColors {
+  val reds = List(
+    (0x330019, 5),
+    (0x99004c, 10),
+    (0xcc0066, 15),
+    (0xff007f, 20)
+  )
+
+  val purps = List(
+    (0x330066, 25),
+    (0x4c0099, 30),
+    (0x6600cc, 35),
+    (0x7f00ff, 40),
+    (0x9933ff, 45)
+  )
+
+  val blues = List(
+    (0x006666, 60),
+    (0x009999, 80),
+    (0x00CCCC, 120),
+    (0x00FFFF, 250),
+    (0x99FFFF, 1000)
+  )
+
+  val colors = (reds ::: purps ::: blues).reverse.map { case (color, bound) => (~color, bound) }
+
+  def chooseColor(count: Int) = {
+    colors.find { case (_, bound) => count > bound }.getOrElse(colors.head)._1
+  }
+}
+
 object Mandelbrot extends App {
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
@@ -109,22 +140,26 @@ object Mandelbrot extends App {
   val personalLaptopDir = "/Users/eddie/IdeaProjects/mandelbrot"
 
   println("creating grid")
-  val g = new Grid(5000)
+  val g = new Grid(500)
 
   val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
 
   def toColor(c: Complex) = {
     val count = boundedCount(c)
 
-    if (count == 1000) Color.CYAN
-    else if (count > 400) Color.RED
-    else if (count > 100) Color.ORANGE
-    else if (count > 70) Color.YELLOW
-    else if (count > 35) Color.GREEN
-    else if (count > 25) Color.LIGHT_GRAY
-    else if (count > 10) Color.GRAY
-    else if (count > 5) Color.DARK_GRAY
-    else Color.BLACK
+    val cc = MyColors.chooseColor(count)
+//    println(cc)
+    cc
+
+//    if (count == 1000) Color.CYAN
+//    else if (count > 400) Color.RED
+//    else if (count > 100) Color.ORANGE
+//    else if (count > 70) Color.YELLOW
+//    else if (count > 25) Color.GREEN
+//    else if (count > 15) Color.LIGHT_GRAY
+//    else if (count > 10) Color.GRAY
+//    else if (count > 5) Color.DARK_GRAY
+//    else Color.BLACK
   }
 
   println("converting to colors")
@@ -133,7 +168,7 @@ object Mandelbrot extends App {
   println("assigning colors")
   colorGrid.zipWithIndex.foreach { case (row, h) =>
     row.zipWithIndex.foreach { case (color, w) =>
-        img.setRGB(w, h, color.getRGB)
+      img.setRGB(w, h, color)
     }
   }
 
@@ -146,7 +181,7 @@ object Mandelbrot extends App {
 //  canvas.setRGB(3, 10, Color.BLACK.getRGB)
 
   println("writing file")
-  val outputFile = new File(s"$personalLaptopDir/testAwtMandelbrot2.png")
+  val outputFile = new File(s"$personalLaptopDir/testAwtMandelbrot4.png")
   ImageIO.write(img, "png", outputFile)
 
 //  val i = new Grid(600).toImage2(bounded(_))
