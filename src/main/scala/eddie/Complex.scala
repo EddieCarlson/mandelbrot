@@ -4,7 +4,11 @@ import java.awt.Component
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.image.BufferedImage
+import java.io.File
 import java.util.Random
+
+import javax.imageio.ImageIO
 
 
 case class Complex(real: Double, imaginary: Double) {
@@ -24,11 +28,12 @@ object Complex {
   val zero = Complex(0, 0)
 }
 
-class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1) {
+// TODO: set is symmetrical across x axis, only calculate half
+class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1) {
   val rSize = rMax - rMin
   val iSize = iMax - iMin
   val pixelsPerUnit = rPixels / rSize
-  val iPixels = pixelsPerUnit * iSize
+  val iPixels = (pixelsPerUnit * iSize).toInt
   val totalPixels = rPixels * iPixels
 
   val column = pixels(iSize, iMin)
@@ -40,16 +45,18 @@ class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1,
     }
   }.reverse
 
-//  grid.map(x => println(x.map { case (c, _) => toChar(c, Mandelbrot.bounded)}.mkString("")))
-  grid.map(x => println(x.map { case (_, ee) => ee.toString}.mkString("")))
+  val gridNums = grid.map(_.map(_._1))
 
-  def toChar(c: Complex, f: (Complex, Complex, Int) => Boolean) = {
-    if (f(c, Complex.zero, 0)) {
-      "x"
-    } else {
-      " "
-    }
-  }
+//  grid.map(x => println(x.map { case (c, _) => toChar(c, Mandelbrot.bounded)}.mkString("")))
+//  grid.map(x => println(x.map { case (_, ee) => ee.toString}.mkString("")))
+//
+//  def toChar(c: Complex, f: (Complex, Complex, Int) => Boolean) = {
+//    if (f(c, Complex.zero, 0)) {
+//      "x"
+//    } else {
+//      " "
+//    }
+//  }
 
   private def pixels(size: Double, offset: Double): Seq[Double] =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
@@ -99,7 +106,49 @@ object Mandelbrot extends App {
     }
   }
 
-  new Grid(10)
+  val personalLaptopDir = "/Users/eddie/IdeaProjects/mandelbrot"
+
+  println("creating grid")
+  val g = new Grid(5000)
+
+  val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
+
+  def toColor(c: Complex) = {
+    val count = boundedCount(c)
+
+    if (count == 1000) Color.CYAN
+    else if (count > 400) Color.RED
+    else if (count > 100) Color.ORANGE
+    else if (count > 70) Color.YELLOW
+    else if (count > 35) Color.GREEN
+    else if (count > 25) Color.LIGHT_GRAY
+    else if (count > 10) Color.GRAY
+    else if (count > 5) Color.DARK_GRAY
+    else Color.BLACK
+  }
+
+  println("converting to colors")
+  val colorGrid = g.gridNums.par.map(_.map(toColor))
+
+  println("assigning colors")
+  colorGrid.zipWithIndex.foreach { case (row, h) =>
+    row.zipWithIndex.foreach { case (color, w) =>
+        img.setRGB(w, h, color.getRGB)
+    }
+  }
+
+//  val width = 60
+//  val height = 40
+//  val canvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+//
+//  0.until(width).foreach { w => 0.until(height).foreach { h => canvas.setRGB(w, h, Color.WHITE.getRGB) } }
+//
+//  canvas.setRGB(3, 10, Color.BLACK.getRGB)
+
+  println("writing file")
+  val outputFile = new File(s"$personalLaptopDir/testAwtMandelbrot2.png")
+  ImageIO.write(img, "png", outputFile)
+
 //  val i = new Grid(600).toImage2(bounded(_))
 //  println(new Grid(600).escapeBoundIterCounts(boundedCount(_)).toList.sortBy(_._2).reverse)
 //  println("out")
