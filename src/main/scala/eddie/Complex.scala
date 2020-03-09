@@ -76,7 +76,8 @@ object MyColors {
 object Mandelbrot extends App {
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
-  // returns the
+  // returns the number of iterations of `f` applied to `c` to yield a "large" value. returns None if still bounded
+  // after 1000 iterations
   def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Option[Int] = {
     if (z.outOfBounds) {
       Some(count)
