@@ -40,7 +40,7 @@ class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
 }
 
-// TODO: colors are all fucked up - why does awt want the conjugate of the hex value?
+// TODO: colors are all fucked up - why does awt want the complement of the hex value?
 object MyColors {
   val reds = List(
     (0x330019, 5),
