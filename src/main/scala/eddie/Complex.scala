@@ -34,18 +34,13 @@ class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double =
   val column = pixels(iSize, iMin)
   val row = pixels(rSize, rMin)
 
-  val grid = column.map { yVal => row.map(Complex(_, yVal)) }.zipWithIndex.map {
-    case (row, yIndex) => row.zipWithIndex.map {
-      case (c, rIndex) => (c, (rIndex, yIndex))
-    }
-  }.reverse
-
-  val gridNums = grid.map(_.map(_._1))
+  val gridPixels = column.map { yVal => row.map(Complex(_, yVal)) }.reverse
 
   private def pixels(size: Double, offset: Double): Seq[Double] =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
 }
 
+// TODO: colors are all fucked up - why does awt want the conjugate of the hex value?
 object MyColors {
   val reds = List(
     (0x330019, 5),
@@ -67,25 +62,26 @@ object MyColors {
     (0x009999, 80),
     (0x00CCCC, 120),
     (0x00FFFF, 250),
-    (0x99FFFF, 1000)
   )
+
+  val lightCyan = ~0x99FFFF
 
   val colors = (reds ::: purps ::: blues).reverse.map { case (color, bound) => (~color, bound) }
 
   def chooseColor(count: Int) = {
-    colors.find { case (_, bound) => count > bound }.getOrElse(colors.head)._1
+    colors.find { case (_, bound) => count > bound }.map(_._1)
   }
 }
 
 object Mandelbrot extends App {
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
-  def bounded(c: Complex, z: Complex = Complex.zero, count: Int = 0): Boolean =
-    count >= 1000 || (!z.outOfBounds && bounded(c, f(z, c), count + 1))
-
-  def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Int = {
-    if (count >= 1000 || z.outOfBounds) {
-      count
+  // returns the
+  def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Option[Int] = {
+    if (z.outOfBounds) {
+      Some(count)
+    } else if (count > 1000) {
+      None
     } else {
       boundedCount(c, f(z, c), count + 1)
     }
@@ -98,13 +94,13 @@ object Mandelbrot extends App {
 
   val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
 
-  def toColor(c: Complex) = {
+  def toColor(c: Complex): Int = {
     val count = boundedCount(c)
-    MyColors.chooseColor(count)
+    count.flatMap(MyColors.chooseColor).getOrElse(MyColors.lightCyan)
   }
 
   println("converting to colors")
-  val colorGrid = g.gridNums.par.map(_.map(toColor))
+  val colorGrid = g.gridPixels.par.map(_.map(toColor))
 
   println("assigning colors")
   colorGrid.zipWithIndex.foreach { case (row, h) =>
