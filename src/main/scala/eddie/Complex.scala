@@ -5,7 +5,6 @@ import java.io.File
 
 import javax.imageio.ImageIO
 
-
 case class Complex(real: Double, imaginary: Double) {
   def outOfBounds: Boolean = Math.abs(real) > 2 || Math.abs(imaginary) > 2
 
@@ -23,18 +22,17 @@ object Complex {
   val zero = Complex(0, 0)
 }
 
-// TODO: set is symmetrical across x axis, only calculate half
-class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1) {
+class HalfGrid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1) {
   val rSize = rMax - rMin
   val iSize = iMax - iMin
   val pixelsPerUnit = rPixels / rSize
   val iPixels = (pixelsPerUnit * iSize).toInt
   val totalPixels = rPixels * iPixels
 
-  val column = pixels(iSize, iMin)
+  val rows = pixels(iSize / 2, iMin)
   val row = pixels(rSize, rMin)
 
-  val gridPixels = column.map { yVal => row.map(Complex(_, yVal)) }.reverse
+  val gridPixels = rows.map { yVal => row.map(Complex(_, yVal)) }.reverse
 
   private def pixels(size: Double, offset: Double): Seq[Double] =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
@@ -59,9 +57,13 @@ object Mandelbrot extends App {
   val workLaptopDir = "/Users/eddie.carlson/developer/eddie/mandelbrot"
 
   println("creating grid")
-  val g = new Grid(5000)
+  val g = new HalfGrid(20000)
 
   val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
+
+  def knownInside(c: Complex) = {
+
+  }
 
   def toColor(c: Complex): Int = {
     val count = boundedCount(c)
@@ -69,7 +71,8 @@ object Mandelbrot extends App {
   }
 
   println("converting to colors")
-  val colorGrid = g.gridPixels.par.map(_.map(toColor))
+  val colorGridHalf = g.gridPixels.par.map(_.map(toColor))
+  val colorGrid = colorGridHalf.reverse ++ colorGridHalf
 
   println("assigning colors")
   colorGrid.zipWithIndex.foreach { case (row, h) =>
@@ -79,6 +82,6 @@ object Mandelbrot extends App {
   }
 
   println("writing file")
-  val outputFile = new File(s"$workLaptopDir/sj1.png")
+  val outputFile = new File(s"$workLaptopDir/sj5.png")
   ImageIO.write(img, "png", outputFile)
 }

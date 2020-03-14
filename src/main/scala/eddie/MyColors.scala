@@ -4,7 +4,7 @@ import java.awt.Color
 
 object MyColors {
   val reds = List(
-    ("#330019", 5),
+    ("#330019", 6),
     ("#99004c", 10),
     ("#cc0066", 15),
     ("#ff007f", 20)
