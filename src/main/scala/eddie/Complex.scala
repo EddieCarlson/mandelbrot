@@ -40,39 +40,6 @@ class Grid(val rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double =
     1.to((size * pixelsPerUnit).toInt).map(d => (d.toDouble / pixelsPerUnit) + offset)
 }
 
-// TODO: colors are all fucked up - why does awt want the complement of the hex value?
-object MyColors {
-  val reds = List(
-    (0x330019, 5),
-    (0x99004c, 10),
-    (0xcc0066, 15),
-    (0xff007f, 20)
-  )
-
-  val purps = List(
-    (0x330066, 25),
-    (0x4c0099, 30),
-    (0x6600cc, 35),
-    (0x7f00ff, 40),
-    (0x9933ff, 45)
-  )
-
-  val blues = List(
-    (0x006666, 60),
-    (0x009999, 80),
-    (0x00CCCC, 120),
-    (0x00FFFF, 250),
-  )
-
-  val lightCyan = ~0x99FFFF
-
-  val colors = (reds ::: purps ::: blues).reverse.map { case (color, bound) => (~color, bound) }
-
-  def chooseColor(count: Int) = {
-    colors.find { case (_, bound) => count > bound }.map(_._1)
-  }
-}
-
 object Mandelbrot extends App {
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
@@ -89,6 +56,7 @@ object Mandelbrot extends App {
   }
 
   val personalLaptopDir = "/Users/eddie/IdeaProjects/mandelbrot"
+  val workLaptopDir = "/Users/eddie.carlson/developer/eddie/mandelbrot"
 
   println("creating grid")
   val g = new Grid(5000)
@@ -97,7 +65,7 @@ object Mandelbrot extends App {
 
   def toColor(c: Complex): Int = {
     val count = boundedCount(c)
-    count.flatMap(MyColors.chooseColor).getOrElse(MyColors.lightCyan)
+    count.map(MyColors.chooseColor).getOrElse(MyColors.lightCyan)
   }
 
   println("converting to colors")
@@ -111,6 +79,6 @@ object Mandelbrot extends App {
   }
 
   println("writing file")
-  val outputFile = new File(s"$personalLaptopDir/testAwtMandelbrot4.png")
+  val outputFile = new File(s"$workLaptopDir/sj1.png")
   ImageIO.write(img, "png", outputFile)
 }
