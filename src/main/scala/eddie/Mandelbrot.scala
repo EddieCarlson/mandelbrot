@@ -1,9 +1,12 @@
 package eddie
 
+import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.image.BufferedImage
 import java.io.File
 
 import javax.imageio.ImageIO
+import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
+import java.awt.{Color, FlowLayout, GridLayout}
 
 object Mandelbrot extends App {
   val start = System.currentTimeMillis
@@ -30,7 +33,7 @@ object Mandelbrot extends App {
 
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
-    val g = Grid(rPixels = 24000, rMin = -2, rMax = 1, iMin = 0, iMax = 1)
+  val g = Grid(rPixels = 150)
 
   val mirrorGate = true
   val mirror = mirrorGate && g.iMin == 0
@@ -65,10 +68,62 @@ object Mandelbrot extends App {
     }
   }
 
-  println("writing file")
-  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
-  ImageIO.write(img, "png", outputFile)
 
   println()
   println(s"took: ${(System.currentTimeMillis - start) / 1000} seconds")
+
+  val tenColorImage = new BufferedImage(50, 500, BufferedImage.TYPE_INT_ARGB)
+  val colors = List(
+    "#002222",
+    "#003333",
+    "#004444",
+    "#005555",
+    "#006666",
+    "#007777",
+    "#008888",
+    "#009999",
+    "#00AAAA",
+    "#00BBBB"
+  ).map(Color.decode).map(_.getRGB)
+
+  val pixelMap = colors.zipWithIndex.flatMap { case (color, imgNum) =>
+    0.to(49).flatMap { x =>
+      0.to(49).map { internalY =>
+        val y = internalY + (imgNum * 50)
+        tenColorImage.setRGB(x, y, color)
+        (imgNum, (x, y))
+      }
+    }
+  }.groupBy(_._1).mapValues(_.map(_._2))
+
+  val icon = new ImageIcon(tenColorImage)
+  val frame = new JFrame
+
+  val colorPanel = new JPanel()
+  colorPanel.setLayout(new GridLayout(10, 2))
+  val components = 0.to(9).map(i => new JButton("set color") -> (new JTextField(6), i))
+  components.foreach { case (butt, (txt, _)) => colorPanel.add(txt); colorPanel.add(butt) }
+  val buttMap = components.toMap.mapValues { case (txt, i) => (txt, pixelMap(i)) }
+  buttMap.values.foreach { case (txt, (x, y) :: _) => txt.setText(tenColorImage.getRGB(x, y).toHexString.substring(2)) }
+  val lbl = new JLabel
+  buttMap.foreach { case (butt, (txt, pixels)) =>
+    butt.addActionListener(new ButtonListener(pixels, tenColorImage, lbl, txt))
+  }
+  frame.setLayout(new FlowLayout)
+  frame.setSize(1600, 1000)
+  lbl.setIcon(icon)
+  frame.add(lbl)
+  frame.add(colorPanel)
+  frame.setVisible(true)
+
+//  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
+//  ImageIO.write(img, "png", outputFile)
+}
+
+class ButtonListener(pixels: List[(Int, Int)], img: BufferedImage, lbl: JLabel, txt: JTextField) extends ActionListener {
+  override def actionPerformed(actionEvent: ActionEvent): Unit = {
+    val color = Color.decode(s"#${txt.getText}").getRGB
+    pixels.foreach { case (x, y) => img.setRGB(x, y, color) }
+    lbl.setIcon(new ImageIcon(img))
+  }
 }
