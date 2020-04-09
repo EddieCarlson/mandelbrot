@@ -126,6 +126,7 @@ object Mandelbrot extends App {
     999,
     1000
   )
+
   def partitionSets(remainingThresh: List[Int], remainingPixelSets: List[(Int, Set[(Int, Int)])], acc: List[Set[(Int, Int)]] = Nil): List[Set[(Int, Int)]] = {
     remainingThresh match {
       case Nil => acc
@@ -138,30 +139,40 @@ object Mandelbrot extends App {
 
   val pixelSets = partitionSets(thresholds, pixelGroups).reverse
 
-
-//  val pixelMap = colors.zipWithIndex.flatMap { case (color, imgNum) =>
-//    0.to(49).flatMap { x =>
-//      0.to(49).map { internalY =>
-//        val y = internalY + (imgNum * 50)
-//        tenColorImage.setRGB(x, y, color)
-//        (imgNum, (x, y))
-//      }
-//    }
-//  }.groupBy(_._1).mapValues(_.map(_._2))
-
   val icon = new ImageIcon(img)
   val frame = new JFrame
 
+  case class ControlRow(from: JTextField, to: JTextField, color: JTextField, button: JButton) {
+    def register(pixelMap: Map[Int, Set[(Int, Int)]], img: BufferedImage, lbl: JLabel): Unit = {
+      button.addActionListener(new ActionListener {
+        override def actionPerformed(actionEvent: ActionEvent): Unit = {
+          val colorInt = Color.decode(s"#${color.getText}").getRGB
+          val fromInt = Integer.parseInt(from.getText)
+          val toInt = Integer.parseInt(to.getText)
+          val pixels = pixelMap.filterKeys(bound => bound >= fromInt && bound <= toInt).values.flatten
+          pixels.foreach { case (x, y) => img.setRGB(x, y, colorInt) }
+          lbl.setIcon(new ImageIcon(img))
+        }
+      })
+    }
+    def addToPanel(panel: JPanel) = {
+      panel.add(from)
+      panel.add(to)
+      panel.add(color)
+      panel.add(button)
+    }
+  }
+
+
+  val controlRows = thresholds.indices.map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
+  val pixelMap = pixelGroups.toMap
+
   val colorPanel = new JPanel()
-  colorPanel.setLayout(new GridLayout(thresholds.size, 3))
-  val components = thresholds.indices.map(i => new JButton("set color") -> (new JTextField(6), i))
-  val thresholdLabels = thresholds.map(t => new JLabel(s"- to $t"))
-  components.zip(thresholdLabels).foreach { case ((butt, (txt, _)), thresh) => colorPanel.add(thresh); colorPanel.add(txt); colorPanel.add(butt) }
-  val buttMap = components.toMap.mapValues { case (txt, i) => (txt, pixelSets(i).toList) }
-  buttMap.values.foreach { case (txt, (x, y) :: _) => txt.setText(img.getRGB(x, y).toHexString.substring(2)) }
+  colorPanel.setLayout(new GridLayout(thresholds.size, 4))
   val lbl = new JLabel
-  buttMap.foreach { case (butt, (txt, pixels)) =>
-    butt.addActionListener(new ButtonListener(pixels, img, lbl, txt))
+  controlRows.foreach { r =>
+    r.register(pixelMap, img, lbl)
+    r.addToPanel(colorPanel)
   }
   frame.setLayout(new FlowLayout)
   frame.setSize(4000, 2500)
