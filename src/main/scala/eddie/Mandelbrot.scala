@@ -52,6 +52,18 @@ object MyImage {
       ("#00FFFF", 250),
     )
 
+  def mult(c: Color, f: Double) = {
+    new Color((c.getRed * f).toInt, (c.getGreen * f).toInt, (c.getBlue * f).toInt)
+  }
+
+  val baseColors = List(
+    Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#00FFFF")
+  )
+
+  val grades = 0.to(5).map { case i => 1 - (i / 6.0)  }.reverse
+
+  val colors = baseColors.flatMap { c => grades.map(mult(c, _)) }.map(_.getRGB)
+
   val defaultColorMap = List(
     1.to(2).map { _ -> Color.decode("#000000").getRGB },
     3.to(4).map { _ -> Color.decode("#160009").getRGB },
@@ -72,8 +84,30 @@ object MyImage {
     List(1000 -> Color.decode("#99FFFF").getRGB)
   ).flatten.toMap
 
+  val inColor = Color.decode("#00BBFF").getRGB
+
   // TODO: don't store grid
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, Set[(Int, Int)]], g: Grid) {
+    def autoColors: Map[Int, Int] = {
+      def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map(1000 -> inColor)): Map[Int, Int] = {
+        val remainingPixelCount = remainingGroups.map(_._2).sum
+        if (remainingGroups.isEmpty) {
+          acc
+        } else if (remainingColors.isEmpty) {
+          val maxColor = acc(acc.keys.filterNot(_ == 1000).max)
+          val remainingMap = remainingGroups.map(_._1).map(t => (t, maxColor)).toMap
+          acc ++ remainingMap
+        } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
+          val (toAdd, size) :: tail = remainingGroups
+          group(remainingColors, tail, curColor, curPixels + size, acc + (toAdd -> curColor))
+        } else {
+          val nextColor :: tail = remainingColors
+          group(tail, remainingGroups, nextColor, 0, acc)
+        }
+      }
+      group(colors, pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == 1000), colors.head)
+    }
+
     def applyColors(colorMap: Map[Int, Int]) = {
       colorMap.foreach { case (bound, color) =>
         pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
@@ -162,7 +196,7 @@ object Mandelbrot extends App {
 
   def setImg(mandelImg: MandelImage, colorMap: Map[Int, Int] = MyImage.defaultColorMap) = {
     curMandelImg = mandelImg
-    mandelImg.applyColors(colorMap)
+    mandelImg.applyColors(mandelImg.autoColors)
     lbl.setIcon(new ImageIcon(mandelImg.img))
   }
 
@@ -173,11 +207,8 @@ object Mandelbrot extends App {
     }
 
     override def mousePressed(mouseEvent: MouseEvent): Unit = {}
-
     override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
-
     override def mouseEntered(mouseEvent: MouseEvent): Unit = {}
-
     override def mouseExited(mouseEvent: MouseEvent): Unit = {}
   })
 
