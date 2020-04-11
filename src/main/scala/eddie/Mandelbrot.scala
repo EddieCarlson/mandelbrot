@@ -7,7 +7,9 @@ import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, FlowLayout, GridLayout}
+
 import MandelbrotFunctions._
+import eddie.MyImage.MandelImage
 
 object MandelbrotFunctions {
   def f(z: Complex, c: Complex): Complex = z.squared + c
@@ -66,11 +68,12 @@ object MyImage {
     61.to(80).map { _ -> Color.decode("#009999").getRGB },
     81.to(120).map { _ -> Color.decode("#00CCCC").getRGB },
     121.to(250).map { _ -> Color.decode("#00FFFF").getRGB },
-    251.to(999).map { _ -> Color.decode("#22FFFF").getRGB },
+    251.to(999).map { _ -> Color.decode("#00FFFF").getRGB },
     List(1000 -> Color.decode("#99FFFF").getRGB)
   ).flatten.toMap
 
-  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, Set[(Int, Int)]]) {
+  // TODO: don't store grid
+  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, Set[(Int, Int)]], g: Grid) {
     def applyColors(colorMap: Map[Int, Int]) = {
       colorMap.foreach { case (bound, color) =>
         pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
@@ -78,6 +81,7 @@ object MyImage {
         }
       }
     }
+    // TODO: this isn't good enough - not all thresholds are represented, don't get a full coloring
     def extractColorMap: Map[Int, Int] = {
       pixelGroups.mapValues(_.toList).collect {
         case (bound, (x, y) :: _) => bound -> img.getRGB(x, y)
@@ -118,7 +122,7 @@ object MyImage {
       }
     }.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
-    MandelImage(img, pixelGroups)
+    MandelImage(img, pixelGroups, g)
   }
 }
 
@@ -144,145 +148,48 @@ object Mandelbrot extends App {
   //  val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
 //  val img = new BufferedImage(g.rPixels, imgYPixels, BufferedImage.TYPE_INT_ARGB)
 
-  val mandelImg = MyImage.fromGrid(g)
+  var curMandelImg = MyImage.fromGrid(g)
 
-  mandelImg.applyColors(MyImage.defaultColorMap)
-
-//  def toColor(c: Complex): Int = {
-//    val count = boundedCount(c)
-//    count.map(MyColors.chooseColor).getOrElse(MyColors.blue.getRGB)
-//  }
-//
-//  def toBound(c: Complex): Int = {
-//    val count = boundedCount(c)
-//    count.getOrElse(1000)
-//  }
-//
-//  def cGrid = g.gridPixels.zipWithIndex.map { case (row, h) =>
-//    (row.map(toColor).zipWithIndex, h)
-//  }
-//
-//  def bGrid = g.gridPixels.zipWithIndex.map { case (row, h) =>
-//    (row.map(toBound).zipWithIndex, h)
-//  }
-
-//  val setRGB = if (mirror) {
-//    (w: Int, h: Int, c: Int) => {
-//      img.setRGB(w, h, c)
-//      img.setRGB(w, h + ((g.iPixels - h) * 2) - 1, c)
-//    }
-//  } else {
-//    (w: Int, h: Int, c: Int) => img.setRGB(w, h, c)
-//  }
-
-//  cGrid.foreach { case (row, h) =>
-//    if (h % 1000 == 0) println(h)
-//    row.foreach { case (color, w) =>
-//      setRGB(w, h, color)
-//    }
-//  }
-
-//  val pixelGroups = bGrid.flatMap { case (row, h) =>
-//    if (h % 1000 == 0) println(h)
-//    row.map { case (bound, w) =>
-//      (bound, (w, h))
-//    }
-//  }.groupBy(_._1).mapValues(_.map(_._2).toSet).toList.sortBy(_._1)
-
-
-  println()
-  println(s"took: ${(System.currentTimeMillis - start) / 1000} seconds")
-
-//  val tenColorImage = new BufferedImage(50, 500, BufferedImage.TYPE_INT_ARGB)
-  val colors = List(
-    "#002222",
-    "#003333",
-    "#004444",
-    "#005555",
-    "#006666",
-    "#007777",
-    "#008888",
-    "#009999",
-    "#00AAAA",
-    "#00BBBB"
-  ).map(Color.decode).map(_.getRGB)
-
-  val thresholds = List(
-    3,
-    5,
-    8,
-    11,
-    15,
-    19,
-    24,
-    29,
-    35,
-    45,
-    51,
-    57,
-    65,
-    75,
-    90,
-    110,
-    140,
-    180,
-    250,
-    999,
-    1000
-  )
-
-//  def partitionSets(remainingThresh: List[Int], remainingPixelSets: List[(Int, Set[(Int, Int)])], acc: List[Set[(Int, Int)]] = Nil): List[Set[(Int, Int)]] = {
-//    remainingThresh match {
-//      case Nil => acc
-//      case h :: t =>
-//        val (inSet, notInSet) = remainingPixelSets.partition(_._1 <= h)
-//        val newAcc = inSet.flatMap(_._2).toSet :: acc
-//        partitionSets(t, notInSet, newAcc)
-//    }
-//  }
-//
-//  // TODO: try cycling through rainbow colors
-//
-//  val pixelSets = partitionSets(thresholds, pixelGroups).reverse
-
-  val img = mandelImg.img
-  val icon = new ImageIcon(img)
-  val frame = new JFrame
-
-  case class ControlRow(from: JTextField, to: JTextField, color: JTextField, button: JButton) {
-    def register(pixelMap: Map[Int, Set[(Int, Int)]], img: BufferedImage, lbl: JLabel): Unit = {
-      button.addActionListener(new ActionListener {
-        override def actionPerformed(actionEvent: ActionEvent): Unit = {
-          val colorInt = Color.decode(s"#${color.getText}").getRGB
-          val fromInt = Integer.parseInt(from.getText)
-          val toInt = Integer.parseInt(to.getText)
-          val pixels = pixelMap.filterKeys(bound => bound >= fromInt && bound <= toInt).values.flatten
-          pixels.foreach { case (x, y) => img.setRGB(x, y, colorInt) }
-          lbl.setIcon(new ImageIcon(img))
-        }
-      })
-    }
-    def addToPanel(panel: JPanel): Unit = {
-      panel.add(from)
-      panel.add(to)
-      panel.add(color)
-      panel.add(button)
-    }
-  }
-
+  val thresholds = List(1,2,3,4,5,6,7,8)
   val controlRows = thresholds.indices.map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
-  val pixelMap = mandelImg.pixelGroups
 
+//  val img = mandelImg.img
+//  val icon = new ImageIcon(img)
+  val frame = new JFrame()
   val colorPanel = new JPanel()
   colorPanel.setLayout(new GridLayout(thresholds.size, 4))
   val lbl = new JLabel
+
+  def setImg(mandelImg: MandelImage, colorMap: Map[Int, Int] = MyImage.defaultColorMap) = {
+    curMandelImg = mandelImg
+    mandelImg.applyColors(colorMap)
+    lbl.setIcon(new ImageIcon(mandelImg.img))
+  }
+
+  lbl.addMouseListener(new MouseListener {
+    override def mouseClicked(mouseEvent: MouseEvent): Unit = {
+      val point = mouseEvent.getPoint
+      setImg(MyImage.fromGrid(curMandelImg.g.zoomCenteredOn(point.x, point.y)), curMandelImg.extractColorMap)
+    }
+
+    override def mousePressed(mouseEvent: MouseEvent): Unit = {}
+
+    override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
+
+    override def mouseEntered(mouseEvent: MouseEvent): Unit = {}
+
+    override def mouseExited(mouseEvent: MouseEvent): Unit = {}
+  })
+
   controlRows.foreach { r =>
-    r.register(pixelMap, img, lbl)
+    r.register(curMandelImg, lbl)
     r.addToPanel(colorPanel)
   }
   frame.setLayout(new FlowLayout)
   frame.setSize(4000, 2500)
-  lbl.setIcon(icon)
+
+  setImg(curMandelImg)
+
   frame.add(lbl)
   frame.add(colorPanel)
   frame.setVisible(true)
@@ -290,6 +197,29 @@ object Mandelbrot extends App {
 //  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
 //  ImageIO.write(img, "png", outputFile)
 }
+
+case class ControlRow(from: JTextField, to: JTextField, color: JTextField, button: JButton) {
+  def register(mImg: => MandelImage, lbl: JLabel): Unit = {
+    button.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val colorInt = Color.decode(s"#${color.getText}").getRGB
+        val fromInt = Integer.parseInt(from.getText)
+        val toInt = Integer.parseInt(to.getText)
+        val pixels = mImg.pixelGroups.filterKeys(bound => bound >= fromInt && bound <= toInt).values.flatten
+        val img = mImg.img
+        pixels.foreach { case (x, y) => img.setRGB(x, y, colorInt) }
+        lbl.setIcon(new ImageIcon(img))
+      }
+    })
+  }
+  def addToPanel(panel: JPanel): Unit = {
+    panel.add(from)
+    panel.add(to)
+    panel.add(color)
+    panel.add(button)
+  }
+}
+
 
 class ButtonListener(pixels: List[(Int, Int)], img: BufferedImage, lbl: JLabel, txt: JTextField) extends ActionListener {
   override def actionPerformed(actionEvent: ActionEvent): Unit = {
