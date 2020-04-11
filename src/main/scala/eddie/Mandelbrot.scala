@@ -2,6 +2,7 @@ package eddie
 
 import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
+
 import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, FlowLayout, GridLayout}
 
@@ -84,7 +85,7 @@ object MyImage {
   val inColor = Color.decode("#00BBFF").getRGB
 
   // TODO: don't store grid
-  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, Set[(Int, Int)]], g: Grid) {
+  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid) {
     def autoColors: Map[Int, Int] = {
       def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
         if (remainingGroups.isEmpty) {
@@ -103,9 +104,9 @@ object MyImage {
       }
       val start = System.currentTimeMillis
       val non1000 = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == 1000)
-      val gro = group(colors, non1000, colors.head, non1000.map(_._2).sum)
       val setupD = System.currentTimeMillis - start
       println(s"autoColor setup: $setupD millis")
+      val gro = group(colors, non1000, colors.head, non1000.map(_._2).sum)
 //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
       val duration = System.currentTimeMillis - start
       println(s"autoColors: $duration millis")
@@ -158,7 +159,10 @@ object MyImage {
 //      (w: Int, h: Int, c: Int) => img.setRGB(w, h, c)
 //    }
 
-    val pixelGroups = bGrid.groupBy(_._1).mapValues(_.map(_._2).toSet)
+    val pgStart = System.currentTimeMillis
+    val pixelGroups = bGrid.groupBy(_._1).mapValues(_.map(_._2))
+    val pgDuration = System.currentTimeMillis - pgStart
+    println(s"make pixelGroups: $pgDuration millis")
 
     val mi = MandelImage(img, pixelGroups, g)
     val duration = System.currentTimeMillis - start
