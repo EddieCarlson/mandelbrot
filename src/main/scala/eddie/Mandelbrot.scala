@@ -2,9 +2,6 @@ package eddie
 
 import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
-import java.io.File
-
-import javax.imageio.ImageIO
 import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, FlowLayout, GridLayout}
 
@@ -89,31 +86,41 @@ object MyImage {
   // TODO: don't store grid
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, Set[(Int, Int)]], g: Grid) {
     def autoColors: Map[Int, Int] = {
-      def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map(1000 -> inColor)): Map[Int, Int] = {
-        val remainingPixelCount = remainingGroups.map(_._2).sum
+      def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
         if (remainingGroups.isEmpty) {
           acc
         } else if (remainingColors.isEmpty) {
-          val maxColor = acc(acc.keys.filterNot(_ == 1000).max)
+          val maxColor = acc(acc.keys.max)
           val remainingMap = remainingGroups.map(_._1).map(t => (t, maxColor)).toMap
           acc ++ remainingMap
         } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
           val (toAdd, size) :: tail = remainingGroups
-          group(remainingColors, tail, curColor, curPixels + size, acc + (toAdd -> curColor))
+          group(remainingColors, tail, curColor, remainingPixelCount - size, curPixels + size, acc + (toAdd -> curColor))
         } else {
           val nextColor :: tail = remainingColors
-          group(tail, remainingGroups, nextColor, 0, acc)
+          group(tail, remainingGroups, nextColor, remainingPixelCount, 0, acc)
         }
       }
-      group(colors, pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == 1000), colors.head)
+      val start = System.currentTimeMillis
+      val non1000 = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == 1000)
+      val gro = group(colors, non1000, colors.head, non1000.map(_._2).sum)
+      val setupD = System.currentTimeMillis - start
+      println(s"autoColor setup: $setupD millis")
+//      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
+      val duration = System.currentTimeMillis - start
+      println(s"autoColors: $duration millis")
+      gro + (1000 -> inColor)
     }
 
     def applyColors(colorMap: Map[Int, Int]) = {
+      val start = System.currentTimeMillis
       colorMap.foreach { case (bound, color) =>
         pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
           img.setRGB(x, y, color)
         }
       }
+      val duration = System.currentTimeMillis - start
+      println(s"applyColors: $duration millis")
     }
     // TODO: this isn't good enough - not all thresholds are represented, don't get a full coloring
     def extractColorMap: Map[Int, Int] = {
@@ -124,6 +131,8 @@ object MyImage {
   }
 
   def fromGrid(g: Grid): MandelImage = {
+    println(g)
+    val start = System.currentTimeMillis
     val mirror = mirrorGate && g.iMin == 0
 
     val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
@@ -135,9 +144,9 @@ object MyImage {
       count.getOrElse(1000)
     }
 
-    def bGrid = g.gridPixels.zipWithIndex.map { case (row, h) =>
-      (row.map(toBound).zipWithIndex, h)
-    }
+    def bGrid = g.gridPixels.zipWithIndex.par.flatMap { case (row, h) =>
+      row.zipWithIndex.map { case (c, w) => (toBound(c), (w, h)) }
+    }.toList
 
     // TODO: does mirroring still work?
 //    val setRGB = if (mirror) {
@@ -149,14 +158,12 @@ object MyImage {
 //      (w: Int, h: Int, c: Int) => img.setRGB(w, h, c)
 //    }
 
-    val pixelGroups = bGrid.flatMap { case (row, h) =>
-      if (h % 1000 == 0) println(h)
-      row.map { case (bound, w) =>
-        (bound, (w, h))
-      }
-    }.groupBy(_._1).mapValues(_.map(_._2).toSet)
+    val pixelGroups = bGrid.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
-    MandelImage(img, pixelGroups, g)
+    val mi = MandelImage(img, pixelGroups, g)
+    val duration = System.currentTimeMillis - start
+    println(s"fromGrid: $duration millis")
+    mi
   }
 }
 
@@ -171,8 +178,8 @@ object Mandelbrot extends App {
 
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
-  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
-//  val g = Grid(rPixels = 1300)
+//  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
+  val g = Grid(rPixels = 1300)
 
   val mirrorGate = true
   val mirror = mirrorGate && g.iMin == 0
@@ -203,7 +210,13 @@ object Mandelbrot extends App {
   lbl.addMouseListener(new MouseListener {
     override def mouseClicked(mouseEvent: MouseEvent): Unit = {
       val point = mouseEvent.getPoint
-      setImg(MyImage.fromGrid(curMandelImg.g.zoomCenteredOn(point.x, point.y)), curMandelImg.extractColorMap)
+      val start = System.currentTimeMillis
+      val newImg = curMandelImg.g.zoomCenteredOn(point.x, point.y)
+      val gridDuration = System.currentTimeMillis - start
+      println(s"grid build: $gridDuration millis")
+      setImg(MyImage.fromGrid(newImg))
+      val duration = System.currentTimeMillis - start
+      println(s"full time: $duration millis")
     }
 
     override def mousePressed(mouseEvent: MouseEvent): Unit = {}
