@@ -12,6 +12,8 @@ import eddie.MyImage.MandelImage
 import scala.collection.mutable
 
 object MandelbrotFunctions {
+  val maxIterations = 1000
+
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
   // returns the number of iterations of `f` applied to `c` to yield a "large" value. returns None if still bounded
@@ -19,7 +21,7 @@ object MandelbrotFunctions {
   def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Option[Int] = {
     if (z.outOfBounds) {
       Some(count)
-    } else if (count > 1000) {
+    } else if (count > maxIterations) {
       None
     } else {
       boundedCount(c, f(z, c), count + 1)
@@ -57,10 +59,10 @@ object MyImage {
   }
 
   val baseColors = List(
-    Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#00FFFF")
+    Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#00BFBF")
   )
 
-  val grades = 0.to(5).map { case i => 1 - (i / 6.0)  }.reverse
+  val grades = 0.to(4).map { case i => 1 - (i / 5.0)  }.reverse
 
   val colors = baseColors.flatMap { c => grades.map(mult(c, _)) }.map(_.getRGB)
 
@@ -80,11 +82,11 @@ object MyImage {
     61.to(80).map { _ -> Color.decode("#009999").getRGB },
     81.to(120).map { _ -> Color.decode("#00CCCC").getRGB },
     121.to(250).map { _ -> Color.decode("#00FFFF").getRGB },
-    251.to(999).map { _ -> Color.decode("#00FFFF").getRGB },
-    List(1000 -> Color.decode("#99FFFF").getRGB)
+    251.until(maxIterations).map { _ -> Color.decode("#00FFFF").getRGB },
+    List(maxIterations -> Color.decode("#99FFFF").getRGB)
   ).flatten.toMap
 
-  val inColor = Color.decode("#00BBFF").getRGB
+  val inColor = Color.decode("#00FFFF").getRGB
 
   // TODO: don't store grid
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid) {
@@ -94,7 +96,7 @@ object MyImage {
         if (remainingGroups.isEmpty) {
           acc
         } else if (remainingColors.isEmpty) {
-          val maxColor = acc(acc.keys.max)
+          val maxColor = curColor
           val remainingMap = remainingGroups.map(_._1).map(t => (t, maxColor)).toMap
           acc ++ remainingMap
         } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
@@ -106,14 +108,14 @@ object MyImage {
         }
       }
       val start = System.currentTimeMillis
-      val non1000 = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == 1000)
+      val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
       val setupD = System.currentTimeMillis - start
       println(s"autoColor setup: $setupD millis")
-      val gro = group(colors, non1000, colors.head, non1000.map(_._2).sum)
+      val gro = group(colors.tail, nonMax, colors.head, nonMax.map(_._2).sum)
 //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
       val duration = System.currentTimeMillis - start
       println(s"autoColors: $duration millis")
-      gro + (1000 -> inColor)
+      gro + (maxIterations -> inColor)
     }
 
     def applyColors(colorMap: Map[Int, Int]) = {
@@ -145,7 +147,7 @@ object MyImage {
 
     def toBound(c: Complex): Int = {
       val count = boundedCount(c)
-      count.getOrElse(1000)
+      count.getOrElse(maxIterations)
     }
 
     def bGrid = g.gridPixels.zipWithIndex.par.flatMap { case (row, h) =>
@@ -189,7 +191,8 @@ object Mandelbrot extends App {
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
 //  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
-  val g = Grid(rPixels = 1300)
+//  val g = Grid(rPixels = 1300)
+  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
 
   val mirrorGate = true
   val mirror = mirrorGate && g.iMin == 0
