@@ -9,6 +9,8 @@ import java.awt.{Color, FlowLayout, GridLayout}
 import MandelbrotFunctions._
 import eddie.MyImage.MandelImage
 
+import scala.collection.mutable
+
 object MandelbrotFunctions {
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
@@ -86,7 +88,8 @@ object MyImage {
 
   // TODO: don't store grid
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid) {
-    def autoColors: Map[Int, Int] = {
+    // map of bound to color
+    val autoColors: Map[Int, Int] = {
       def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
         if (remainingGroups.isEmpty) {
           acc
@@ -160,7 +163,10 @@ object MyImage {
 //    }
 
     val pgStart = System.currentTimeMillis
-    val pixelGroups = bGrid.groupBy(_._1).mapValues(_.map(_._2))
+    val gg = bGrid
+    val bgDuration = System.currentTimeMillis - pgStart
+    println(s"make bGrid: $bgDuration")
+    val pixelGroups = gg.groupBy(_._1).mapValues(_.map(_._2))
     val pgDuration = System.currentTimeMillis - pgStart
     println(s"make pixelGroups: $pgDuration millis")
 
@@ -195,14 +201,14 @@ object Mandelbrot extends App {
 
   var curMandelImg = MyImage.fromGrid(g)
 
-  val thresholds = List(1,2,3,4,5,6,7,8)
-  val controlRows = thresholds.indices.map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
+  val colorCount = MyImage.colors.size + 1
+  val controlRows = 1.to(colorCount).map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
 
 //  val img = mandelImg.img
 //  val icon = new ImageIcon(img)
   val frame = new JFrame()
   val colorPanel = new JPanel()
-  colorPanel.setLayout(new GridLayout(thresholds.size, 4))
+  colorPanel.setLayout(new GridLayout(colorCount + 1, 4))
   val lbl = new JLabel
 
   def setImg(mandelImg: MandelImage, colorMap: Map[Int, Int] = MyImage.defaultColorMap) = {
@@ -233,6 +239,26 @@ object Mandelbrot extends App {
     r.register(curMandelImg, lbl)
     r.addToPanel(colorPanel)
   }
+  val zoomOutButton = new JButton("out")
+  colorPanel.add(zoomOutButton)
+  zoomOutButton.addActionListener(new ActionListener {
+    override def actionPerformed(actionEvent: ActionEvent): Unit = {
+      setImg(MyImage.fromGrid(curMandelImg.g.zoomOut))
+    }
+  })
+  val loadColors = new JButton("get")
+  loadColors.addActionListener(new ActionListener {
+    override def actionPerformed(actionEvent: ActionEvent): Unit = {
+      // list of color to range of pixels
+      val ranges = curMandelImg.extractColorMap.toList.groupBy(_._2).mapValues(_.map(_._1).sorted).toList.sortBy(_._2.head).map(x => (x._1, (x._2.head, x._2.last)))
+      ranges.zip(controlRows).foreach { case ((color, (lower, upper)),row ) =>
+        row.from.setText(lower.toString)
+        row.to.setText(upper.toString)
+        row.color.setText(color.toHexString.substring(2))
+      }
+    }
+  })
+  colorPanel.add(loadColors)
   frame.setLayout(new FlowLayout)
   frame.setSize(4000, 2500)
 
