@@ -58,38 +58,32 @@ object MyImage {
     new Color((c.getRed * f).toInt, (c.getGreen * f).toInt, (c.getBlue * f).toInt)
   }
 
-  val baseColors = List(
-    Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#00BFBF")
-  )
+  type ColorInt = Int
 
-  val grades = 0.to(4).map { case i => 1 - (i / 5.0)  }.reverse
+  def expandBaseColors(baseColors: List[(Color, Int)]): List[ColorInt] = {
+    baseColors.flatMap { case (color, num) =>
+      val multipliers = 0.until(num).map { i => 1 - (i.toDouble / num) }.reverse
+      multipliers.map(mult(color, _)).map(_.getRGB)
+    }
+  }
 
-  val colors = baseColors.flatMap { c => grades.map(mult(c, _)) }.map(_.getRGB)
+  val initialBaseColors = List((Color.decode("#ff007f"), 4), (Color.decode("#9933ff"), 4), (Color.decode("#00BFBF"), 4))
+//  val baseColors = List(Color.decode("#02c4ff"), Color.decode("#ffd102"), Color.decode("#ff0263"))
+//  val baseColors = List(Color.decode("#ff937b"), Color.decode("#7bffda"), Color.decode("#ff937b"), Color.decode("#7bffda"))
+//  val baseColors = List(Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#ff007f"), Color.decode("#9933ff"))
 
-  val defaultColorMap = List(
-    1.to(2).map { _ -> Color.decode("#000000").getRGB },
-    3.to(4).map { _ -> Color.decode("#160009").getRGB },
-    5.to(6).map { _ -> Color.decode("#330019").getRGB },
-    7.to(10).map { _ -> Color.decode("#99004c").getRGB },
-    11.to(15).map { _ -> Color.decode("#cc0066").getRGB },
-    16.to(20).map { _ -> Color.decode("#ff007f").getRGB },
-    21.to(25).map { _ -> Color.decode("#330066").getRGB },
-    26.to(30).map { _ -> Color.decode("#4c0099").getRGB },
-    31.to(35).map { _ -> Color.decode("#6600cc").getRGB },
-    36.to(40).map { _ -> Color.decode("#7f00ff").getRGB },
-    41.to(45).map { _ -> Color.decode("#9933ff").getRGB },
-    46.to(60).map { _ -> Color.decode("#006666").getRGB },
-    61.to(80).map { _ -> Color.decode("#009999").getRGB },
-    81.to(120).map { _ -> Color.decode("#00CCCC").getRGB },
-    121.to(250).map { _ -> Color.decode("#00FFFF").getRGB },
-    251.until(maxIterations).map { _ -> Color.decode("#00FFFF").getRGB },
-    List(maxIterations -> Color.decode("#99FFFF").getRGB)
-  ).flatten.toMap
+  val grades = 0.to(3).map { case i => 1 - (i / 4.0)  }.reverse
 
-  val inColor = Color.decode("#00FFFF").getRGB
+//  val colorsIncludingIn = baseColors.flatMap { c => grades.map(mult(c, _)) }.map(_.getRGB)
+//  val colors = colorsIncludingIn.dropRight(1)
+//  val inColor = colorsIncludingIn.last
+
+//  val inColor = Color.decode("#00FFFF").getRGB
+//  val inColor = Color.decode("#FF0263").getRGB
+
 
   // TODO: don't store grid
-  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid) {
+  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, baseColors: List[(Color, Int)] = initialBaseColors) {
     // map of bound to color
     val autoColors: Map[Int, Int] = {
       def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
@@ -111,6 +105,9 @@ object MyImage {
       val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
       val setupD = System.currentTimeMillis - start
       println(s"autoColor setup: $setupD millis")
+      val allColors = expandBaseColors(baseColors)
+      val colors = allColors.dropRight(1)
+      val inColor = allColors.last
       val gro = group(colors.tail, nonMax, colors.head, nonMax.map(_._2).sum)
 //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
       val duration = System.currentTimeMillis - start
@@ -191,8 +188,8 @@ object Mandelbrot extends App {
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
 //  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
-//  val g = Grid(rPixels = 1300)
-  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
+  val g = Grid(rPixels = 1300)
+//  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
 
   val mirrorGate = true
   val mirror = mirrorGate && g.iMin == 0
@@ -204,17 +201,19 @@ object Mandelbrot extends App {
 
   var curMandelImg = MyImage.fromGrid(g)
 
-  val colorCount = MyImage.colors.size + 1
-  val controlRows = 1.to(colorCount).map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
+//  val colorCount = MyImage.colors.size + 1
+//  val controlRows = 1.to(colorCount).map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
 
 //  val img = mandelImg.img
 //  val icon = new ImageIcon(img)
   val frame = new JFrame()
   val colorPanel = new JPanel()
-  colorPanel.setLayout(new GridLayout(colorCount + 1, 4))
+  colorPanel.setLayout(new GridLayout(curMandelImg.baseColors.size + 1, 2))
+  curMandelImg.baseColors.map { (new JTextField(6), new JTextField(2)) }
+//  colorPanel.setLayout(new GridLayout(colorCount + 1, 4))
   val lbl = new JLabel
 
-  def setImg(mandelImg: MandelImage, colorMap: Map[Int, Int] = MyImage.defaultColorMap) = {
+  def setImg(mandelImg: MandelImage) = {
     curMandelImg = mandelImg
     mandelImg.applyColors(mandelImg.autoColors)
     lbl.setIcon(new ImageIcon(mandelImg.img))
@@ -238,10 +237,10 @@ object Mandelbrot extends App {
     override def mouseExited(mouseEvent: MouseEvent): Unit = {}
   })
 
-  controlRows.foreach { r =>
-    r.register(curMandelImg, lbl)
-    r.addToPanel(colorPanel)
-  }
+//  controlRows.foreach { r =>
+//    r.register(curMandelImg, lbl)
+//    r.addToPanel(colorPanel)
+//  }
   val zoomOutButton = new JButton("out")
   colorPanel.add(zoomOutButton)
   zoomOutButton.addActionListener(new ActionListener {
@@ -250,18 +249,18 @@ object Mandelbrot extends App {
     }
   })
   val loadColors = new JButton("get")
-  loadColors.addActionListener(new ActionListener {
-    override def actionPerformed(actionEvent: ActionEvent): Unit = {
-      // list of color to range of pixels
-      val ranges = curMandelImg.extractColorMap.toList.groupBy(_._2).mapValues(_.map(_._1).sorted).toList.sortBy(_._2.head).map(x => (x._1, (x._2.head, x._2.last)))
-      ranges.zip(controlRows).foreach { case ((color, (lower, upper)),row ) =>
-        row.from.setText(lower.toString)
-        row.to.setText(upper.toString)
-        row.color.setText(color.toHexString.substring(2))
-      }
-    }
-  })
-  colorPanel.add(loadColors)
+//  loadColors.addActionListener(new ActionListener {
+//    override def actionPerformed(actionEvent: ActionEvent): Unit = {
+//      // list of color to range of pixels
+//      val ranges = curMandelImg.extractColorMap.toList.groupBy(_._2).mapValues(_.map(_._1).sorted).toList.sortBy(_._2.head).map(x => (x._1, (x._2.head, x._2.last)))
+//      ranges.zip(controlRows).foreach { case ((color, (lower, upper)),row ) =>
+//        row.from.setText(lower.toString)
+//        row.to.setText(upper.toString)
+//        row.color.setText(color.toHexString.substring(2))
+//      }
+//    }
+//  })
+//  colorPanel.add(loadColors)
   frame.setLayout(new FlowLayout)
   frame.setSize(4000, 2500)
 
@@ -298,10 +297,10 @@ case class ControlRow(from: JTextField, to: JTextField, color: JTextField, butto
 }
 
 
-class ButtonListener(pixels: List[(Int, Int)], img: BufferedImage, lbl: JLabel, txt: JTextField) extends ActionListener {
-  override def actionPerformed(actionEvent: ActionEvent): Unit = {
-    val color = Color.decode(s"#${txt.getText}").getRGB
-    pixels.foreach { case (x, y) => img.setRGB(x, y, color) }
-    lbl.setIcon(new ImageIcon(img))
-  }
-}
+//class ButtonListener(pixels: List[(Int, Int)], img: BufferedImage, lbl: JLabel, txt: JTextField) extends ActionListener {
+//  override def actionPerformed(actionEvent: ActionEvent): Unit = {
+//    val color = Color.decode(s"#${txt.getText}").getRGB
+//    pixels.foreach { case (x, y) => img.setRGB(x, y, color) }
+//    lbl.setIcon(new ImageIcon(img))
+//  }
+//}
