@@ -90,8 +90,7 @@ object MyImage {
         if (remainingGroups.isEmpty) {
           acc
         } else if (remainingColors.isEmpty) {
-          val maxColor = curColor
-          val remainingMap = remainingGroups.map(_._1).map(t => (t, maxColor)).toMap
+          val remainingMap = remainingGroups.map(_._1).map(t => (t, curColor)).toMap
           acc ++ remainingMap
         } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
           val (toAdd, size) :: tail = remainingGroups
@@ -209,7 +208,7 @@ object Mandelbrot extends App {
   val frame = new JFrame()
   val colorPanel = new JPanel()
   colorPanel.setLayout(new GridLayout(curMandelImg.baseColors.size + 1, 2))
-  curMandelImg.baseColors.map { (new JTextField(6), new JTextField(2)) }
+  curMandelImg.baseColors.map { _ => (new JTextField(6), new JTextField(2)) }
 //  colorPanel.setLayout(new GridLayout(colorCount + 1, 4))
   val lbl = new JLabel
 
