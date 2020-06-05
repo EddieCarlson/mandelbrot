@@ -54,7 +54,7 @@ object MyImage {
       ("#00FFFF", 250),
     )
 
-  def mult(c: Color, f: Double) = {
+  def mult(c: Color, f: Double): Color = {
     new Color((c.getRed * f).toInt, (c.getGreen * f).toInt, (c.getBlue * f).toInt)
   }
 
