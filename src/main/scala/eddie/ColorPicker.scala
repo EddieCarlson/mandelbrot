@@ -4,9 +4,9 @@ import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.{Color, FlowLayout, GridLayout}
 import java.awt.image.BufferedImage
 
-import eddie.MyImage.ColorInt
+import eddie.MyImage.{ColorInt, MandelImage}
 import javafx.scene.control.ColorPicker
-import javax.swing.{Icon, ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
+import javax.swing.{BoxLayout, Icon, ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
@@ -46,7 +46,7 @@ object ColorPicker {
   def createColorSquares(colors: List[ColorInt], height: Int = squareSize): JPanel = {
     val panel = new JPanel()
     val colorSquares = colors.map { c => colorRect(squareSize, height, c) }
-    panel.setLayout(new GridLayout(colorSquares.size, 1))
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
     colorSquares.foreach(panel.add)
     panel
   }
@@ -56,10 +56,11 @@ object ColorPicker {
   case class Column(hexCode: String, colorList: List[ColorInt]) {
     val colorSquares = createColorSquares(colorList)
     val hexField = new JTextField(hexCode)
-    val numField = new JTextField(colorList.size)
+    val numField = new JTextField(colorList.size.toString)
     val panel = {
       val p = new JPanel()
       p.setLayout(new GridLayout(3, 1))
+      p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
       p.add(hexField)
       p.add(colorSquares)
       p.add(numField)
@@ -81,26 +82,13 @@ object ColorPicker {
       p
     }
 
-    val changeButton = {
-      val button = new JButton("change colors")
-      button.addActionListener(new ActionListener {
-        override def actionPerformed(actionEvent: ActionEvent): Unit = {
-          val newColorInput = columns.map { c =>
-            (c.hexField.getText, Integer.parseInt(c.numField.getText))
-          }
-          val newColorPanel = ColorPanel(newColorInput)
-          outermostPanel.removeAll()
-          outermostPanel.add(newColorPanel.panel)
-        }
-      })
-      button
-    }
+    val changeColorsButton = new JButton("change colors")
 
     val panel: JPanel = {
       val p = new JPanel()
-      p.setLayout(new GridLayout(1, 2))
+      p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
       p.add(columnPanel)
-      p.add(changeButton)
+      p.add(changeColorsButton)
       p
     }
   }
@@ -137,11 +125,11 @@ object Z extends App {
 //  val colors = List(Color.decode("#00ff00"), Color.decode("#00cc00"), Color.decode("#009900")).map(_.getRGB)
 //  val colors2 = List(Color.decode("#0000ff"), Color.decode("#0000cc"), Color.decode("#000099")).map(_.getRGB)
   val input = List(("ff007f", 4), ("9933ff", 4), ("00BFBF", 4))
-  val colorPanel = ColorPanel(input)
-  outermostPanel.add(colorPanel.panel)
   val frame = new JFrame()
-  frame.add(outermostPanel)
-  frame.setLayout(new FlowLayout)
-  frame.setSize(1000, 700)
-  frame.setVisible(true)
+//  val colorPanel = ColorPanel(input, frame)
+//  outermostPanel.add(colorPanel.panel)
+//  frame.add(outermostPanel)
+//  frame.setLayout(new FlowLayout)
+//  frame.setSize(1000, 700)
+//  frame.setVisible(true)
 }
