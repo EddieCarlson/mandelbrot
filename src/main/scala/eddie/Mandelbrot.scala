@@ -123,55 +123,6 @@ object MyImage {
     println(s"applyColors: $duration millis")
   }
 
-  // TODO: don't store grid
-//  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, initialBaseColors: List[(Color, Int)] = initialBaseColors) {
-//    // map of bound to color
-//    def autoColors(baseColors: List[(Color, Int)] = initialBaseColors): Map[Int, ColorInt] = {
-//      def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
-//        if (remainingGroups.isEmpty) {
-//          acc
-//        } else if (remainingColors.isEmpty) {
-//          val remainingMap = remainingGroups.map(_._1).map(t => (t, curColor)).toMap
-//          acc ++ remainingMap
-//        } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
-//          val (toAdd, size) :: tail = remainingGroups
-//          group(remainingColors, tail, curColor, remainingPixelCount - size, curPixels + size, acc + (toAdd -> curColor))
-//        } else {
-//          val nextColor :: tail = remainingColors
-//          group(tail, remainingGroups, nextColor, remainingPixelCount, 0, acc)
-//        }
-//      }
-//      val start = System.currentTimeMillis
-//      val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
-//      val setupD = System.currentTimeMillis - start
-//      println(s"autoColor setup: $setupD millis")
-//      val allColors = expandBaseColors(baseColors)
-//      val colors = allColors.dropRight(1)
-//      val inColor = allColors.last
-//      val gro = group(colors.tail, nonMax, colors.head, nonMax.map(_._2).sum)
-//      //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
-//      val duration = System.currentTimeMillis - start
-//      println(s"autoColors: $duration millis")
-//      gro + (maxIterations -> inColor)
-//    }
-//
-//    def applyColors(colorMap: Map[Int, Int]) = {
-//      val start = System.currentTimeMillis
-//      colorMap.foreach { case (bound, color) =>
-//        pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
-//          img.setRGB(x, y, color)
-//        }
-//      }
-//      val duration = System.currentTimeMillis - start
-//      println(s"applyColors: $duration millis")
-//    }
-//    // TODO: this isn't good enough - not all thresholds are represented, don't get a full coloring
-//    def extractColorMap: Map[Int, Int] = {
-//      pixelGroups.mapValues(_.toList).collect {
-//        case (bound, (x, y) :: _) => bound -> img.getRGB(x, y)
-//      }
-//    }
-//  }
 
   def fromGrid(g: Grid, colors: List[(Color, Int)] = initialBaseColors): MandelImage = {
     println(g)
@@ -236,33 +187,25 @@ object Mandelbrot extends App {
 
   val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
 
-  //  val img = new BufferedImage(g.rPixels, g.iPixels, BufferedImage.TYPE_INT_ARGB)
-//  val img = new BufferedImage(g.rPixels, imgYPixels, BufferedImage.TYPE_INT_ARGB)
-
-//  var curMandelImg = MyImage.fromGrid(g)
-
-//  val colorCount = MyImage.colors.size + 1
-//  val controlRows = 1.to(colorCount).map(_ => ControlRow(new JTextField(3), new JTextField(3), new JTextField(6), new JButton("apply")))
-
-//  val img = mandelImg.img
-//  val icon = new ImageIcon(img)
   val startingMandelImg = MyImage.fromGrid(g)
   val frame = new JFrame()
   val lbl = new JLabel
+  val zoomOutButton = new JButton("out")
   val colorPanelWrapper = new JPanel()
   frame.setLayout(new FlowLayout)
   frame.setSize(2000, 1500)
   frame.add(lbl)
   frame.add(colorPanelWrapper)
+  frame.add(zoomOutButton)
 
   def setEverything(mImg: MandelImage): Unit = {
-    lbl.getMouseListeners.foreach(l => lbl.removeMouseListener(l))
     lbl.setIcon(new ImageIcon(mImg.img))
     val colorPanelColors = mImg.colors.map { case (c, i) => (c.getRGB.toHexString.substring(2), i) }
     val colorPanel = ColorPicker.ColorPanel(colorPanelColors)
     colorPanelWrapper.removeAll()
     colorPanelWrapper.add(colorPanel.panel)
 
+    lbl.getMouseListeners.foreach(lbl.removeMouseListener)
     lbl.addMouseListener(new MouseListener {
       override def mouseClicked(mouseEvent: MouseEvent): Unit = {
         val point = mouseEvent.getPoint
@@ -280,7 +223,6 @@ object Mandelbrot extends App {
     colorPanel.changeColorsButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
         val newColorInput = colorPanel.columns.map { c =>
-          println(c.hexField.getText)
           (c.hexField.getText, Integer.parseInt(c.numField.getText))
         }
         val mImgColors = newColorInput.map { case (hex, num) => (Color.decode(s"#$hex"), num) }
@@ -289,106 +231,18 @@ object Mandelbrot extends App {
       }
     })
 
+    zoomOutButton.getActionListeners.foreach(zoomOutButton.removeActionListener)
+    zoomOutButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        setEverything(MyImage.fromGrid(mImg.g.zoomOut, mImg.colors))
+      }
+    })
+
     frame.setVisible(true)
   }
 
   setEverything(startingMandelImg)
 
-//  colorPanel.setLayout(new GridLayout(curMandelImg.baseColors.size + 1, 2))
-//  curMandelImg.baseColors.map { _map => (new JTextField(6), new JTextField(2)) }
-//  colorPanel.setLayout(new GridLayout(colorCount + 1, 4))
-
-//  def setImg(mandelImg: MandelImage) = {
-//    curMandelImg = mandelImg
-//    mandelImg.applyColors(mandelImg.autoColors(MyImage.initialBaseColors))
-//    lbl.setIcon(new ImageIcon(mandelImg.img))
-//  }
-//
-//  lbl.addMouseListener(new MouseListener {
-//    override def mouseClicked(mouseEvent: MouseEvent): Unit = {
-//      val point = mouseEvent.getPoint
-//      val start = System.currentTimeMillis
-//      val newImg = curMandelImg.g.zoomCenteredOn(point.x, point.y)
-//      val gridDuration = System.currentTimeMillis - start
-//      println(s"grid build: $gridDuration millis")
-//      setImg(MyImage.fromGrid(newImg))
-//      val duration = System.currentTimeMillis - start
-//      println(s"full time: $duration millis")
-//    }
-//
-//    override def mousePressed(mouseEvent: MouseEvent): Unit = {}
-//    override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
-//    override def mouseEntered(mouseEvent: MouseEvent): Unit = {}
-//    override def mouseExited(mouseEvent: MouseEvent): Unit = {}
-//  })
-
-//  controlRows.foreach { r =>
-//    r.register(curMandelImg, lbl)
-//    r.addToPanel(colorPanel)
-//  }
-  val zoomOutButton = new JButton("out")
-//  colorPanel.add(zoomOutButton)
-//  zoomOutButton.addActionListener(new ActionListener {
-//    override def actionPerformed(actionEvent: ActionEvent): Unit = {
-//      setImg(MyImage.fromGrid(curMandelImg.g.zoomOut))
-//    }
-//  })
-//  val loadColors = new JButton("get")
-//  loadColors.addActionListener(new ActionListener {
-//    override def actionPerformed(actionEvent: ActionEvent): Unit = {
-//      // list of color to range of pixels
-//      val ranges = curMandelImg.extractColorMap.toList.groupBy(_._2).mapValues(_.map(_._1).sorted).toList.sortBy(_._2.head).map(x => (x._1, (x._2.head, x._2.last)))
-//      ranges.zip(controlRows).foreach { case ((color, (lower, upper)),row ) =>
-//        row.from.setText(lower.toString)
-//        row.to.setText(upper.toString)
-//        row.color.setText(color.toHexString.substring(2))
-//      }
-//    }
-//  })
-//  colorPanel.add(loadColors)
-
-//  val colorPanelColors = MyImage.initialBaseColors.map { case (c, i) => (c.getRGB.toHexString.substring(2), i) }
-//  val realColorPanel = ColorPicker.ColorPanel(colorPanelColors, colorPanel, frame, curMandelImg, lbl)
-//  colorPanel.add(realColorPanel.panel)
-//
-//
-//  setImg(curMandelImg)
-//
-//  frame.add(lbl)
-//  frame.add(colorPanel)
-//  frame.setVisible(true)
-
 //  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
 //  ImageIO.write(img, "png", outputFile)
 }
-
-case class ControlRow(from: JTextField, to: JTextField, color: JTextField, button: JButton) {
-  def register(mImg: => MandelImage, lbl: JLabel): Unit = {
-    button.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val colorInt = Color.decode(s"#${color.getText}").getRGB
-        val fromInt = Integer.parseInt(from.getText)
-        val toInt = Integer.parseInt(to.getText)
-        val pixels = mImg.pixelGroups.filterKeys(bound => bound >= fromInt && bound <= toInt).values.flatten
-        val img = mImg.img
-        pixels.foreach { case (x, y) => img.setRGB(x, y, colorInt) }
-        lbl.setIcon(new ImageIcon(img))
-      }
-    })
-  }
-  def addToPanel(panel: JPanel): Unit = {
-    panel.add(from)
-    panel.add(to)
-    panel.add(color)
-    panel.add(button)
-  }
-}
-
-
-//class ButtonListener(pixels: List[(Int, Int)], img: BufferedImage, lbl: JLabel, txt: JTextField) extends ActionListener {
-//  override def actionPerformed(actionEvent: ActionEvent): Unit = {
-//    val color = Color.decode(s"#${txt.getText}").getRGB
-//    pixels.foreach { case (x, y) => img.setRGB(x, y, color) }
-//    lbl.setIcon(new ImageIcon(img))
-//  }
-//}

@@ -51,8 +51,6 @@ object ColorPicker {
     panel
   }
 
-  val outermostPanel = new JPanel()
-
   case class Column(hexCode: String, colorList: List[ColorInt]) {
     val colorSquares = createColorSquares(colorList)
     val hexField = new JTextField(hexCode)
@@ -92,44 +90,9 @@ object ColorPicker {
       p
     }
   }
-
-
-  def createColumn(hexCode: String, gradations: Int, height: Int = squareSize): JPanel = {
-    val panel = new JPanel()
-    panel.setLayout(new GridLayout(3, 1))
-    panel.add(new JTextField(hexCode))
-    val colorSquares = createColorSquares(expandBaseColor(hexCode, gradations))
-    panel.add(colorSquares)
-    panel.add(new JTextField)
-    panel
-  }
-
-//  def createMultiColorColumn(colors: List[ColorInt]) = {
-//    createColorSquares(colors, )
-//  }
-
-//  def create(colorCols: List[(String, Int)]): JPanel = {
-//    val panel = new JPanel()
-//    val columns = colorCols.map(Function.tupled(createColumn(_, _)))
-//    val allColorColumn = createColumn(colorCols.flatten, squareSize / colorCols.size)
-//    val allColumns = columns :+ allColorColumn
-//    panel.setLayout(new GridLayout(1, allColumns.size))
-//    allColumns.foreach(panel.add)
-//
-//    panel
-//  }
 }
 
 object Z extends App {
-  import ColorPicker._
-//  val colors = List(Color.decode("#00ff00"), Color.decode("#00cc00"), Color.decode("#009900")).map(_.getRGB)
-//  val colors2 = List(Color.decode("#0000ff"), Color.decode("#0000cc"), Color.decode("#000099")).map(_.getRGB)
   val input = List(("ff007f", 4), ("9933ff", 4), ("00BFBF", 4))
   val frame = new JFrame()
-//  val colorPanel = ColorPanel(input, frame)
-//  outermostPanel.add(colorPanel.panel)
-//  frame.add(outermostPanel)
-//  frame.setLayout(new FlowLayout)
-//  frame.setSize(1000, 700)
-//  frame.setVisible(true)
 }
