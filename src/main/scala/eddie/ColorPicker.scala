@@ -6,13 +6,13 @@ import java.awt.image.BufferedImage
 
 import eddie.MyImage.{ColorInt, MandelImage}
 import javafx.scene.control.ColorPicker
-import javax.swing.{BoxLayout, Icon, ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
+import javax.swing.{BoxLayout, Icon, ImageIcon, JButton, JCheckBox, JFrame, JLabel, JPanel, JTextField}
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
 object ColorPicker {
   val squareSize = 50
-  val maxPixels = 800
+  val maxPixels = 600
 
   def colorRect(x: Int, y: Int, color: ColorInt): JLabel = {
     val img = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB)
@@ -77,7 +77,6 @@ object ColorPicker {
     val columns = colorsWithHex.map(Function.tupled(Column.apply))
     val columnPanel = {
       val p = new JPanel()
-//      p.setLayout(new GridLayout(1, columns.size + 1))
       p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS))
       columns.foreach(c => p.add(c.panel))
       p.add(allColorSquares)

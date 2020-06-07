@@ -232,7 +232,7 @@ object Mandelbrot extends App {
   imgFrame.add(saveHighRes)
   val colorFrame = new JFrame()
   colorFrame.setLayout(new FlowLayout)
-  colorFrame.setSize(500, 1200)
+  colorFrame.setSize(500, 800)
   colorFrame.add(colorPanelWrapper)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd_hh-mm-ss")
@@ -285,9 +285,7 @@ object Mandelbrot extends App {
 
     saveButton.getActionListeners.foreach(saveButton.removeActionListener)
     saveButton.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        saveImage(mImg)
-      }
+      override def actionPerformed(actionEvent: ActionEvent): Unit = saveImage(mImg)
     })
 
     colorPanel.addColumn.addActionListener(new ActionListener {
