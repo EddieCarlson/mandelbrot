@@ -5,6 +5,10 @@ import java.awt.image.BufferedImage
 
 import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, FlowLayout, GridLayout}
+import java.io.{BufferedWriter, File, FileWriter}
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.concurrent.atomic.AtomicInteger
 
 import MandelbrotFunctions._
 import eddie.MyImage.MandelImage
@@ -12,6 +16,7 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 import eddie.ColorPicker.ColorPanel
+import javax.imageio.ImageIO
 
 object MandelbrotFunctions {
   val maxIterations = 1000
@@ -69,7 +74,25 @@ object MyImage {
     }
   }
 
-  val initialBaseColors = List((Color.decode("#ff007f"), 4), (Color.decode("#9933ff"), 4), (Color.decode("#00BFBF"), 4))
+//  val initialBaseColors = List(
+//    (Color.decode("#ff007f"), 4),
+//    (Color.decode("#9933ff"), 4),
+//    (Color.decode("#00BFBF"), 4),
+//    (Color.decode("#000000"), 0),
+//    (Color.decode("#000000"), 0),
+//    (Color.decode("#000000"), 0),
+//    (Color.decode("#000000"), 0)
+//  )
+  val initialBaseColors = List(
+    (Color.decode("#ea0303"), 2),
+    (Color.decode("#ea7d03"), 3),
+    (Color.decode("#fbf834"), 4),
+    (Color.decode("#5bfc28"), 5),
+    (Color.decode("#1919f6"), 6),
+    (Color.decode("#19dff6"), 7),
+    (Color.decode("#9933ff"), 8),
+    (Color.decode("#000000"), 1)
+  )
 //  val baseColors = List(Color.decode("#02c4ff"), Color.decode("#ffd102"), Color.decode("#ff0263"))
 //  val baseColors = List(Color.decode("#ff937b"), Color.decode("#7bffda"), Color.decode("#ff937b"), Color.decode("#7bffda"))
 //  val baseColors = List(Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#ff007f"), Color.decode("#9933ff"))
@@ -171,7 +194,7 @@ object Mandelbrot extends App {
   val start = System.currentTimeMillis
 
   val personalLaptopDir = "/Users/eddie/IdeaProjects/mandelbrot"
-  val workLaptopDir = "/Users/eddie.carlson/developer/eddie/mandelbrot"
+  val workLaptopDir = "/Users/eddie.carlson/developer/eddie/mandelbrot/explorer_images"
 
   //  val g = new HalfGrid(20000)
   //  val g = new Grid(900)
@@ -179,7 +202,7 @@ object Mandelbrot extends App {
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
 //  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
-  val g = Grid(rPixels = 1300)
+  val g = Grid(rPixels = 1200)
 //  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
 
   val mirrorGate = true
@@ -188,15 +211,26 @@ object Mandelbrot extends App {
   val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
 
   val startingMandelImg = MyImage.fromGrid(g)
-  val frame = new JFrame()
+  val imgFrame = new JFrame()
   val lbl = new JLabel
-  val zoomOutButton = new JButton("out")
+  val zoomOutButton = new JButton("zoom out")
+  val saveButton = new JButton("save")
+  val saveAs = new JTextField("my_image")
   val colorPanelWrapper = new JPanel()
-  frame.setLayout(new FlowLayout)
-  frame.setSize(2000, 1500)
-  frame.add(lbl)
-  frame.add(colorPanelWrapper)
-  frame.add(zoomOutButton)
+  imgFrame.setLayout(new FlowLayout)
+  imgFrame.setSize(g.rPixels + 10, g.iPixels + 10)
+  imgFrame.add(lbl)
+  imgFrame.add(zoomOutButton)
+  imgFrame.add(saveButton)
+  val colorFrame = new JFrame()
+  colorFrame.setLayout(new FlowLayout)
+  colorFrame.setSize(500, 1200)
+  colorFrame.add(colorPanelWrapper)
+
+  val dateFormat = new SimpleDateFormat("yyyy-MM-dd_hh-mm-ss")
+  val date = new Date()
+  val saveDirPath = s"$workLaptopDir/${dateFormat.format(date)}"
+  val saveNum = new AtomicInteger(1)
 
   def setEverything(mImg: MandelImage): Unit = {
     lbl.setIcon(new ImageIcon(mImg.img))
@@ -228,6 +262,7 @@ object Mandelbrot extends App {
         val mImgColors = newColorInput.map { case (hex, num) => (Color.decode(s"#$hex"), num) }
         val newMImg = mImg.copy(colors = mImgColors)
         setEverything(newMImg)
+
       }
     })
 
@@ -238,10 +273,37 @@ object Mandelbrot extends App {
       }
     })
 
-    frame.setVisible(true)
+    saveButton.getActionListeners.foreach(saveButton.removeActionListener)
+    saveButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        saveImage(mImg)
+      }
+    })
+
+    imgFrame.setVisible(true)
+    colorFrame.setVisible(true)
   }
 
   setEverything(startingMandelImg)
+
+  def saveImage(mImg: MandelImage): Unit = {
+    val dir = new File(saveDirPath)
+    if (!dir.exists) dir.mkdir
+    val saveNumPath = s"$saveDirPath/${saveNum.getAndIncrement}"
+    val imgFile = new File(s"$saveNumPath.png")
+    ImageIO.write(mImg.img, "png", imgFile)
+    val infoFile = new File(s"${saveNumPath}_info.txt")
+    infoFile.createNewFile
+    val infoWriter = new FileWriter(infoFile.getAbsoluteFile)
+    val infoBufferWriter = new BufferedWriter(infoWriter)
+    infoBufferWriter.write(mImg.g.toString)
+    infoBufferWriter.write("\n")
+    val writeableColors = mImg.colors.map {
+      case (color, num) => (color.getRGB.toHexString.substring(2), num)
+    }
+    infoBufferWriter.write(writeableColors.toString)
+    infoBufferWriter.close()
+  }
 
 //  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
 //  ImageIO.write(img, "png", outputFile)

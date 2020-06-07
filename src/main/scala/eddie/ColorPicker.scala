@@ -1,7 +1,7 @@
 package eddie
 
 import java.awt.event.{ActionEvent, ActionListener}
-import java.awt.{Color, FlowLayout, GridLayout}
+import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.awt.image.BufferedImage
 
 import eddie.MyImage.{ColorInt, MandelImage}
@@ -12,6 +12,7 @@ case class ColorColumn(hexField: JTextField, numField: JTextField)
 
 object ColorPicker {
   val squareSize = 50
+  val maxPixels = 800
 
   def colorRect(x: Int, y: Int, color: ColorInt): JLabel = {
     val img = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB)
@@ -44,8 +45,9 @@ object ColorPicker {
   }
 
   def createColorSquares(colors: List[ColorInt], height: Int = squareSize): JPanel = {
+    val realHeight = Math.max(Math.min(height, maxPixels / colors.size), 1)
     val panel = new JPanel()
-    val colorSquares = colors.map { c => colorRect(squareSize, height, c) }
+    val colorSquares = colors.map { c => colorRect(squareSize, realHeight, c) }
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
     colorSquares.foreach(panel.add)
     panel
@@ -55,9 +57,10 @@ object ColorPicker {
     val colorSquares = createColorSquares(colorList)
     val hexField = new JTextField(hexCode)
     val numField = new JTextField(colorList.size.toString)
+    hexField.setMaximumSize(new Dimension(110, 30))
+    numField.setMaximumSize(new Dimension(110, 30))
     val panel = {
       val p = new JPanel()
-      p.setLayout(new GridLayout(3, 1))
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
       p.add(hexField)
       p.add(colorSquares)
@@ -69,24 +72,45 @@ object ColorPicker {
   case class ColorPanel(colorInput: List[(String, Int)]) {
     val colorsWithHex = colorInput.map { case (hex, gradations) => (hex, expandBaseColor(hex, gradations)) }
     val colors = colorsWithHex.map(_._2)
-    val allColorSquares = createColorSquares(colors.flatten, squareSize / colors.size)
+    val allColorSquares = createColorSquares(colors.flatten, squareSize / 2)
 
     val columns = colorsWithHex.map(Function.tupled(Column.apply))
     val columnPanel = {
       val p = new JPanel()
-      p.setLayout(new GridLayout(1, columns.size + 1))
+//      p.setLayout(new GridLayout(1, columns.size + 1))
+      p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS))
       columns.foreach(c => p.add(c.panel))
       p.add(allColorSquares)
       p
     }
 
     val changeColorsButton = new JButton("change colors")
+    val addColumn = new JButton("add col at index:")
+    val removeColumn = new JButton("remove col (idx):")
+    val colIndex = new JTextField((colorInput.size - 1).toString)
+    colIndex.setMaximumSize(new Dimension(50, 30))
+
+    val addRemovePanel = {
+      val p = new JPanel()
+      p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS))
+      val addRemoveP = new JPanel()
+      addRemoveP.setLayout(new BoxLayout(addRemoveP, BoxLayout.Y_AXIS))
+      addRemoveP.add(addColumn)
+      addRemoveP.add(removeColumn)
+      val indexP = new JPanel()
+      indexP.setLayout(new BoxLayout(indexP, BoxLayout.Y_AXIS))
+      indexP.add(colIndex)
+      p.add(addRemoveP)
+      p.add(indexP)
+      p
+    }
 
     val panel: JPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
       p.add(columnPanel)
       p.add(changeColorsButton)
+      p.add(addRemovePanel)
       p
     }
   }
