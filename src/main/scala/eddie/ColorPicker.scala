@@ -45,7 +45,7 @@ object ColorPicker {
   }
 
   def createColorSquares(colors: List[ColorInt], height: Int = squareSize): JPanel = {
-    val realHeight = Math.max(Math.min(height, maxPixels / colors.size), 1)
+    val realHeight = Math.max(Math.min(height, maxPixels / (colors.size + 1)), 1)
     val panel = new JPanel()
     val colorSquares = colors.map { c => colorRect(squareSize, realHeight, c) }
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
@@ -87,7 +87,7 @@ object ColorPicker {
     val changeColorsButton = new JButton("change colors")
     val addColumn = new JButton("add col at index:")
     val removeColumn = new JButton("remove col (idx):")
-    val colIndex = new JTextField((colorInput.size - 1).toString)
+    val colIndex = new JTextField("0")
     colIndex.setMaximumSize(new Dimension(50, 30))
 
     val addRemovePanel = {

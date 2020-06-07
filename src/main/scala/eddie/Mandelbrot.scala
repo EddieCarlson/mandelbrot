@@ -74,25 +74,21 @@ object MyImage {
     }
   }
 
-//  val initialBaseColors = List(
-//    (Color.decode("#ff007f"), 4),
-//    (Color.decode("#9933ff"), 4),
-//    (Color.decode("#00BFBF"), 4),
-//    (Color.decode("#000000"), 0),
-//    (Color.decode("#000000"), 0),
-//    (Color.decode("#000000"), 0),
-//    (Color.decode("#000000"), 0)
-//  )
   val initialBaseColors = List(
-    (Color.decode("#ea0303"), 2),
-    (Color.decode("#ea7d03"), 3),
-    (Color.decode("#fbf834"), 4),
-    (Color.decode("#5bfc28"), 5),
-    (Color.decode("#1919f6"), 6),
-    (Color.decode("#19dff6"), 7),
-    (Color.decode("#9933ff"), 8),
-    (Color.decode("#000000"), 1)
+    (Color.decode("#ff007f"), 4),
+    (Color.decode("#9933ff"), 4),
+    (Color.decode("#00BFBF"), 4)
   )
+//  val initialBaseColors = List(
+//    (Color.decode("#ea0303"), 2),
+//    (Color.decode("#ea7d03"), 3),
+//    (Color.decode("#fbf834"), 4),
+//    (Color.decode("#5bfc28"), 5),
+//    (Color.decode("#1919f6"), 6),
+//    (Color.decode("#19dff6"), 7),
+//    (Color.decode("#9933ff"), 8),
+//    (Color.decode("#000000"), 1)
+//  )
 //  val baseColors = List(Color.decode("#02c4ff"), Color.decode("#ffd102"), Color.decode("#ff0263"))
 //  val baseColors = List(Color.decode("#ff937b"), Color.decode("#7bffda"), Color.decode("#ff937b"), Color.decode("#7bffda"))
 //  val baseColors = List(Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#ff007f"), Color.decode("#9933ff"))
@@ -218,7 +214,7 @@ object Mandelbrot extends App {
   val saveAs = new JTextField("my_image")
   val colorPanelWrapper = new JPanel()
   imgFrame.setLayout(new FlowLayout)
-  imgFrame.setSize(g.rPixels + 10, g.iPixels + 10)
+  imgFrame.setSize(g.rPixels + 10, g.iPixels + 60)
   imgFrame.add(lbl)
   imgFrame.add(zoomOutButton)
   imgFrame.add(saveButton)
@@ -232,10 +228,13 @@ object Mandelbrot extends App {
   val saveDirPath = s"$workLaptopDir/${dateFormat.format(date)}"
   val saveNum = new AtomicInteger(1)
 
-  def setEverything(mImg: MandelImage): Unit = {
-    lbl.setIcon(new ImageIcon(mImg.img))
+  def fromImg(mImg: MandelImage) = {
     val colorPanelColors = mImg.colors.map { case (c, i) => (c.getRGB.toHexString.substring(2), i) }
-    val colorPanel = ColorPicker.ColorPanel(colorPanelColors)
+    ColorPicker.ColorPanel(colorPanelColors)
+  }
+
+  def setEverything(mImg: MandelImage)(colorPanel: ColorPanel = fromImg(mImg)): Unit = {
+    lbl.setIcon(new ImageIcon(mImg.img))
     colorPanelWrapper.removeAll()
     colorPanelWrapper.add(colorPanel.panel)
 
@@ -245,7 +244,7 @@ object Mandelbrot extends App {
         val point = mouseEvent.getPoint
         val newGrid = mImg.g.zoomCenteredOn(point.x, point.y)
         val newMImg = MyImage.fromGrid(newGrid, mImg.colors)
-        setEverything(newMImg)
+        setEverything(newMImg)()
       }
 
       override def mousePressed(mouseEvent: MouseEvent): Unit = {}
@@ -261,15 +260,14 @@ object Mandelbrot extends App {
         }
         val mImgColors = newColorInput.map { case (hex, num) => (Color.decode(s"#$hex"), num) }
         val newMImg = mImg.copy(colors = mImgColors)
-        setEverything(newMImg)
-
+        setEverything(newMImg)()
       }
     })
 
     zoomOutButton.getActionListeners.foreach(zoomOutButton.removeActionListener)
     zoomOutButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        setEverything(MyImage.fromGrid(mImg.g.zoomOut, mImg.colors))
+        setEverything(MyImage.fromGrid(mImg.g.zoomOut, mImg.colors))()
       }
     })
 
@@ -280,11 +278,29 @@ object Mandelbrot extends App {
       }
     })
 
+    colorPanel.addColumn.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val index = Integer.parseInt(colorPanel.colIndex.getText)
+        val (before, after) = colorPanel.colorInput.splitAt(index)
+        val newPanel = ColorPanel(before ::: ("000000", 0) :: after)
+        setEverything(mImg)(newPanel)
+      }
+    })
+
+    colorPanel.removeColumn.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val index = Integer.parseInt(colorPanel.colIndex.getText)
+        val (before, after) = colorPanel.colorInput.splitAt(index)
+        val newPanel = ColorPanel(before ::: after.drop(1))
+        setEverything(mImg)(newPanel)
+      }
+    })
+
     imgFrame.setVisible(true)
     colorFrame.setVisible(true)
   }
 
-  setEverything(startingMandelImg)
+  setEverything(startingMandelImg)()
 
   def saveImage(mImg: MandelImage): Unit = {
     val dir = new File(saveDirPath)
