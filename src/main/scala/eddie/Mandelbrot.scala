@@ -77,7 +77,8 @@ object MyImage {
   val initialBaseColors = List(
     (Color.decode("#ff007f"), 4),
     (Color.decode("#9933ff"), 4),
-    (Color.decode("#00BFBF"), 4)
+    (Color.decode("#00BFBF"), 6),
+    (Color.decode("#33FFFF"), 1)
   )
 //  val initialBaseColors = List(
 //    (Color.decode("#ea0303"), 2),
@@ -103,7 +104,7 @@ object MyImage {
 //  val inColor = Color.decode("#FF0263").getRGB
 
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[(Color, Int)] = initialBaseColors) {
-    def autoColors(baseColors: List[(Color, Int)] = initialBaseColors): Map[Int, ColorInt] = {
+    val autoColors: Map[Int, ColorInt] = {
       def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
         if (remainingGroups.isEmpty) {
           acc
@@ -122,10 +123,10 @@ object MyImage {
       val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
       val setupD = System.currentTimeMillis - start
       println(s"autoColor setup: $setupD millis")
-      val allColors = expandBaseColors(baseColors)
-      val colors = allColors.dropRight(1)
+      val allColors = expandBaseColors(colors)
+      val notInColors = allColors.dropRight(1)
       val inColor = allColors.last
-      val gro = group(colors.tail, nonMax, colors.head, nonMax.map(_._2).sum)
+      val gro = group(notInColors.tail, nonMax, notInColors.head, nonMax.map(_._2).sum)
       //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
       val duration = System.currentTimeMillis - start
       println(s"autoColors: $duration millis")
@@ -133,7 +134,7 @@ object MyImage {
     }
 
     val start = System.currentTimeMillis
-    autoColors(colors).foreach { case (bound, color) =>
+    autoColors.foreach { case (bound, color) =>
       pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
         img.setRGB(x, y, color)
       }
@@ -157,7 +158,16 @@ object MyImage {
       count.getOrElse(maxIterations)
     }
 
-    def bGrid = g.gridPixels.zipWithIndex.par.flatMap { case (row, h) =>
+    def pixelsWithIndex = {
+      val withIndex = g.gridPixels.zipWithIndex
+      if (g.rSize <= 4000) {
+        withIndex.par
+      } else {
+        withIndex
+      }
+    }
+
+    def bGrid = pixelsWithIndex.flatMap { case (row, h) =>
       row.zipWithIndex.map { case (c, w) => (toBound(c), (w, h)) }
     }.toList
 
@@ -211,13 +221,15 @@ object Mandelbrot extends App {
   val lbl = new JLabel
   val zoomOutButton = new JButton("zoom out")
   val saveButton = new JButton("save")
+  val saveHighRes = new JButton("save high res")
   val saveAs = new JTextField("my_image")
   val colorPanelWrapper = new JPanel()
   imgFrame.setLayout(new FlowLayout)
-  imgFrame.setSize(g.rPixels + 10, g.iPixels + 60)
+  imgFrame.setSize(g.rPixels + 10, g.iPixels + 65)
   imgFrame.add(lbl)
   imgFrame.add(zoomOutButton)
   imgFrame.add(saveButton)
+  imgFrame.add(saveHighRes)
   val colorFrame = new JFrame()
   colorFrame.setLayout(new FlowLayout)
   colorFrame.setSize(500, 1200)
@@ -296,16 +308,25 @@ object Mandelbrot extends App {
       }
     })
 
+    saveHighRes.getActionListeners.foreach(saveHighRes.removeActionListener)
+    saveHighRes.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val bigGrid = mImg.g.copy(rPixels = 10000)
+        val bigMimg = MyImage.fromGrid(bigGrid, mImg.colors)
+        saveImage(bigMimg, "big_")
+      }
+    })
+
     imgFrame.setVisible(true)
     colorFrame.setVisible(true)
   }
 
   setEverything(startingMandelImg)()
 
-  def saveImage(mImg: MandelImage): Unit = {
+  def saveImage(mImg: MandelImage, filePrefix: String = ""): Unit = {
     val dir = new File(saveDirPath)
     if (!dir.exists) dir.mkdir
-    val saveNumPath = s"$saveDirPath/${saveNum.getAndIncrement}"
+    val saveNumPath = s"$saveDirPath/$filePrefix${saveNum.getAndIncrement}"
     val imgFile = new File(s"$saveNumPath.png")
     ImageIO.write(mImg.img, "png", imgFile)
     val infoFile = new File(s"${saveNumPath}_info.txt")

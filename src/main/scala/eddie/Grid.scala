@@ -7,16 +7,16 @@ case class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double 
   val iPixels = (pixelsPerUnit * iSize).toInt
   val totalPixels = rPixels * iPixels
 
-  val rows = Stream.tabulate(iPixels)(n => iMax - (iSize * n / iPixels))
-  val row = Stream.tabulate(rPixels)(n => rMin + (rSize * n / rPixels))
+  def iAtIndex(i: Int) = iMax - (iSize * i / iPixels)
+  def rAtIndex(i: Int) = rMin + (rSize * i / rPixels)
 
-//  def gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
-  val gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
+  val rows = Stream.tabulate(iPixels)(iAtIndex)
+  val row = Stream.tabulate(rPixels)(rAtIndex)
 
-  def pixelToCoord(x: Int, y: Int): (Double, Double) = {
-    val coord = gridPixels(y)(x)
-    (coord.real, coord.imaginary)
-  }
+  def gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
+//  val gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
+
+  def pixelToCoord(x: Int, y: Int): (Double, Double) = (rAtIndex(x), iAtIndex(y))
 
   def zoomCenteredOn(x: Int, y: Int): Grid = {
     val (r, i) = pixelToCoord(x, y)
