@@ -74,34 +74,7 @@ object MyImage {
     }
   }
 
-  val initialBaseColors = List(
-    (Color.decode("#ff007f"), 4),
-    (Color.decode("#9933ff"), 4),
-    (Color.decode("#00BFBF"), 6),
-    (Color.decode("#33FFFF"), 1)
-  )
-//  val initialBaseColors = List(
-//    (Color.decode("#ea0303"), 2),
-//    (Color.decode("#ea7d03"), 3),
-//    (Color.decode("#fbf834"), 4),
-//    (Color.decode("#5bfc28"), 5),
-//    (Color.decode("#1919f6"), 6),
-//    (Color.decode("#19dff6"), 7),
-//    (Color.decode("#9933ff"), 8),
-//    (Color.decode("#000000"), 1)
-//  )
-//  val baseColors = List(Color.decode("#02c4ff"), Color.decode("#ffd102"), Color.decode("#ff0263"))
-//  val baseColors = List(Color.decode("#ff937b"), Color.decode("#7bffda"), Color.decode("#ff937b"), Color.decode("#7bffda"))
-//  val baseColors = List(Color.decode("#ff007f"), Color.decode("#9933ff"), Color.decode("#ff007f"), Color.decode("#9933ff"))
-
-  val grades = 0.to(3).map { case i => 1 - (i / 4.0)  }.reverse
-
-//  val colorsIncludingIn = baseColors.flatMap { c => grades.map(mult(c, _)) }.map(_.getRGB)
-//  val colors = colorsIncludingIn.dropRight(1)
-//  val inColor = colorsIncludingIn.last
-
-//  val inColor = Color.decode("#00FFFF").getRGB
-//  val inColor = Color.decode("#FF0263").getRGB
+  val initialBaseColors = MyColors.candy
 
   case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[(Color, Int)] = initialBaseColors) {
     val autoColors: Map[Int, ColorInt] = {
@@ -167,7 +140,7 @@ object MyImage {
       }
     }
 
-    def bGrid = pixelsWithIndex.flatMap { case (row, h) =>
+    def bGrid = g.gridPixels.zipWithIndex.flatMap { case (row, h) =>
       row.zipWithIndex.map { case (c, w) => (toBound(c), (w, h)) }
     }.toList
 
