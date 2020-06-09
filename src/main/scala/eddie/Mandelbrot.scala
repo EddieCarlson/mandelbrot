@@ -293,6 +293,7 @@ object Mandelbrot extends App {
   }
 
   setEverything(startingMandelImg)()
+  HexHelper.frame.setVisible(true)
 
   def saveImage(mImg: MandelImage, filePrefix: String = ""): Unit = {
     val dir = new File(saveDirPath)
