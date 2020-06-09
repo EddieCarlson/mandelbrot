@@ -239,11 +239,8 @@ object Mandelbrot extends App {
 
     colorPanel.changeColorsButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val newColorInput = colorPanel.columns.map { c =>
-          (c.topHexField.getText, c.botHexField.getText, Integer.parseInt(c.numField.getText))
-        }
-        val mImgColors = newColorInput.map { case (topHex, botHex, num) => Gradient(num, botHex, topHex) }
-        val newMImg = mImg.copy(colors = mImgColors)
+        val newGradients = colorPanel.columns.map(_.toGradient)
+        val newMImg = mImg.copy(colors = newGradients)
         setEverything(newMImg)()
       }
     })

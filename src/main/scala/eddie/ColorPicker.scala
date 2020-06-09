@@ -27,7 +27,7 @@ case class Gradient(numGrad: Int, last: String, first: String = "000000", includ
   }
 
   def toColumn = {
-    ColorPicker.Column(first, last, gradations)
+    ColorPicker.Column(first, last, gradations, includeFirst, includeLast)
   }
 }
 
@@ -93,23 +93,36 @@ object ColorPicker {
     panel
   }
 
-  case class Column(topHexCode: String, botHexCode: String, colorList: List[ColorInt]) {
+  case class Column(topHexCode: String, botHexCode: String, colorList: List[ColorInt], includeTop: Boolean, includeBot: Boolean) {
     val colorSquares = createColorSquares(colorList)
     val topHexField = new JTextField(topHexCode)
     val botHexField = new JTextField(botHexCode)
     val numField = new JTextField(colorList.size.toString)
     val includeTopCheckbox = new JCheckBox()
+    includeTopCheckbox.setSelected(includeTop)
+    val includeBotCheckbox = new JCheckBox()
+    includeBotCheckbox.setSelected(includeBot)
     topHexField.setMaximumSize(new Dimension(110, 30))
     botHexField.setMaximumSize(new Dimension(110, 30))
     numField.setMaximumSize(new Dimension(110, 30))
-    val panel = {
+
+    val panel: JPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
       p.add(numField)
+      p.add(includeTopCheckbox)
       p.add(topHexField)
       p.add(colorSquares)
       p.add(botHexField)
+      p.add(includeBotCheckbox)
       p
+    }
+
+    def toGradient: Gradient = {
+      val numGrad = Integer.parseInt(numField.getText)
+      val includeTop = includeTopCheckbox.getModel.isSelected
+      val includeBot = includeBotCheckbox.getModel.isSelected
+      Gradient(numGrad, botHexField.getText, topHexField.getText, includeTop, includeBot)
     }
   }
 
