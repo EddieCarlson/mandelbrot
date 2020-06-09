@@ -76,7 +76,7 @@ object MyImage {
 
   val initialBaseColors = MyColors.candy
 
-  case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[(Color, Int)] = initialBaseColors) {
+case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))) {
     val autoColors: Map[Int, ColorInt] = {
       def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
         if (remainingGroups.isEmpty) {
@@ -96,7 +96,7 @@ object MyImage {
       val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
       val setupD = System.currentTimeMillis - start
       println(s"autoColor setup: $setupD millis")
-      val allColors = expandBaseColors(colors)
+      val allColors = colors.flatMap(_.gradations)
       val notInColors = allColors.dropRight(1)
       val inColor = allColors.last
       val gro = group(notInColors.tail, nonMax, notInColors.head, nonMax.map(_._2).sum)
@@ -117,7 +117,7 @@ object MyImage {
   }
 
 
-  def fromGrid(g: Grid, colors: List[(Color, Int)] = initialBaseColors): MandelImage = {
+  def fromGrid(g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))): MandelImage = {
     println(g)
     val start = System.currentTimeMillis
     val mirror = mirrorGate && g.iMin == 0
@@ -214,8 +214,7 @@ object Mandelbrot extends App {
   val saveNum = new AtomicInteger(1)
 
   def fromImg(mImg: MandelImage) = {
-    val colorPanelColors = mImg.colors.map { case (c, i) => (c.getRGB.toHexString.substring(2), i) }
-    ColorPicker.ColorPanel(colorPanelColors)
+    ColorPicker.ColorPanel(mImg.colors)
   }
 
   def setEverything(mImg: MandelImage)(colorPanel: ColorPanel = fromImg(mImg)): Unit = {
@@ -241,9 +240,9 @@ object Mandelbrot extends App {
     colorPanel.changeColorsButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
         val newColorInput = colorPanel.columns.map { c =>
-          (c.hexField.getText, Integer.parseInt(c.numField.getText))
+          (c.topHexField.getText, c.botHexField.getText, Integer.parseInt(c.numField.getText))
         }
-        val mImgColors = newColorInput.map { case (hex, num) => (Color.decode(s"#$hex"), num) }
+        val mImgColors = newColorInput.map { case (topHex, botHex, num) => Gradient(num, topHex, botHex) }
         val newMImg = mImg.copy(colors = mImgColors)
         setEverything(newMImg)()
       }
@@ -264,8 +263,8 @@ object Mandelbrot extends App {
     colorPanel.addColumn.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
         val index = Integer.parseInt(colorPanel.colIndex.getText)
-        val (before, after) = colorPanel.colorInput.splitAt(index)
-        val newPanel = ColorPanel(before ::: ("000000", 0) :: after)
+        val (before, after) = colorPanel.gradients.splitAt(index)
+        val newPanel = ColorPanel(before ::: Gradient(0, "000000") :: after)
         setEverything(mImg)(newPanel)
       }
     })
@@ -273,7 +272,7 @@ object Mandelbrot extends App {
     colorPanel.removeColumn.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
         val index = Integer.parseInt(colorPanel.colIndex.getText)
-        val (before, after) = colorPanel.colorInput.splitAt(index)
+        val (before, after) = colorPanel.gradients.splitAt(index)
         val newPanel = ColorPanel(before ::: after.drop(1))
         setEverything(mImg)(newPanel)
       }
@@ -307,9 +306,7 @@ object Mandelbrot extends App {
     val infoBufferWriter = new BufferedWriter(infoWriter)
     infoBufferWriter.write(mImg.g.toString)
     infoBufferWriter.write("\n")
-    val writeableColors = mImg.colors.map {
-      case (color, num) => (color.getRGB.toHexString.substring(2), num)
-    }
+    val writeableColors = mImg.colors
     infoBufferWriter.write(writeableColors.toString)
     infoBufferWriter.close()
   }

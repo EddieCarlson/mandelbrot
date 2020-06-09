@@ -12,9 +12,48 @@ import java.awt.datatransfer.StringSelection
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
+case class Gradient(numGrad: Int, first: String, last: String = "000000", includeFirst: Boolean = true, includeLast: Boolean = false) {
+  val firstColor = Color.decode(s"#$first")
+  val lastColor = Color.decode(s"#$last")
+
+  val gradations = {
+    val extraFirst = if (includeFirst) 0 else 1
+    val extraLast = if (includeLast) 0 else 1
+    val numGradations = numGrad + extraFirst + extraLast
+    val mults = 0.until(numGradations).map { i => i.toDouble / (numGradations - 1) }
+    val multsAndComplement = mults.reverse.zip(mults)
+    val gradations = multsAndComplement.map { case (m, m2) =>
+      ColorPicker.wAvg(firstColor.getRed, firstColor.getGreen, firstColor.getBlue, m,
+        lastColor.getRed, lastColor.getGreen, lastColor.getBlue, m2)
+    }.toList
+    val dropFirst = if (includeFirst) gradations else gradations.drop(1)
+    val dropLast = if (includeLast) dropFirst else dropFirst.dropRight(1)
+    dropLast.reverse
+  }
+
+  def toColumn = {
+    ColorPicker.Column(first, last, gradations)
+  }
+}
+
+object Gradient {
+  def fromColor(c: Color, n: Int) = {
+    Gradient(n, c.getRGB.toHexString.substring(2))
+  }
+}
+
 object ColorPicker {
   val squareSize = 50
   val maxPixels = 600
+
+  def wAvg(r: Int, g: Int, b: Int, m: Double, r2: Int, g2: Int, b2: Int, m2: Double) = {
+    val rr = (r * m + r2 * m2).toInt
+    val gg = (g * m + g2 * m2).toInt
+    val bb = (b * m + b2 * m2).toInt
+    println(rr, gg, bb)
+    new Color(rr, gg, bb).getRGB
+  }
+
 
   def colorRectImg(x: Int, y: Int, color: ColorInt): BufferedImage = {
     val img = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB)
@@ -60,28 +99,29 @@ object ColorPicker {
     panel
   }
 
-  case class Column(hexCode: String, colorList: List[ColorInt]) {
+  case class Column(topHexCode: String, botHexCode: String, colorList: List[ColorInt]) {
     val colorSquares = createColorSquares(colorList)
-    val hexField = new JTextField(hexCode)
+    val topHexField = new JTextField(topHexCode)
+    val botHexField = new JTextField(botHexCode)
     val numField = new JTextField(colorList.size.toString)
-    hexField.setMaximumSize(new Dimension(110, 30))
+    topHexField.setMaximumSize(new Dimension(110, 30))
+    botHexField.setMaximumSize(new Dimension(110, 30))
     numField.setMaximumSize(new Dimension(110, 30))
     val panel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
-      p.add(hexField)
-      p.add(colorSquares)
       p.add(numField)
+      p.add(topHexField)
+      p.add(colorSquares)
+      p.add(botHexField)
       p
     }
   }
 
-  case class ColorPanel(colorInput: List[(String, Int)]) {
-    val colorsWithHex = colorInput.map { case (hex, gradations) => (hex, expandBaseColor(hex, gradations)) }
-    val colors = colorsWithHex.map(_._2)
-    val allColorSquares = createColorSquares(colors.flatten, squareSize / 2)
+  case class ColorPanel(gradients: List[Gradient]) {
+    val allColorSquares = createColorSquares(gradients.flatMap(_.gradations), squareSize / 2)
 
-    val columns = colorsWithHex.map(Function.tupled(Column.apply))
+    val columns = gradients.map(_.toColumn)
     val columnPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS))
