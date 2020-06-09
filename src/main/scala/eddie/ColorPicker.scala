@@ -1,14 +1,10 @@
 package eddie
 
-import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
-import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.awt.image.BufferedImage
+import java.awt.{Color, Dimension}
 
-import eddie.MyImage.{ColorInt, MandelImage}
-import javafx.scene.control.ColorPicker
-import javax.swing.{BoxLayout, Icon, ImageIcon, JButton, JCheckBox, JFrame, JLabel, JPanel, JTextField}
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
+import eddie.MyImage.ColorInt
+import javax.swing._
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
@@ -50,7 +46,6 @@ object ColorPicker {
     val rr = (r * m + r2 * m2).toInt
     val gg = (g * m + g2 * m2).toInt
     val bb = (b * m + b2 * m2).toInt
-    println(rr, gg, bb)
     new Color(rr, gg, bb).getRGB
   }
 

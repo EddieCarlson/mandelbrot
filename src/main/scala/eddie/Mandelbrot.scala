@@ -281,7 +281,7 @@ object Mandelbrot extends App {
     saveHighRes.getActionListeners.foreach(saveHighRes.removeActionListener)
     saveHighRes.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val bigGrid = mImg.g.copy(rPixels = 10000)
+        val bigGrid = mImg.g.copy(rPixels = 6000)
         val bigMimg = MyImage.fromGrid(bigGrid, mImg.colors)
         saveImage(bigMimg, "big_")
       }
