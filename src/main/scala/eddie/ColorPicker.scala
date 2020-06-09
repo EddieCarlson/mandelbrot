@@ -1,5 +1,6 @@
 package eddie
 
+import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.image.BufferedImage
 import java.awt.{Color, Dimension}
 
@@ -12,7 +13,7 @@ case class Gradient(numGrad: Int, last: String, first: String = "000000", includ
   val firstColor = Color.decode(s"#$first")
   val lastColor = Color.decode(s"#$last")
 
-  val gradations = {
+  val gradations: List[ColorInt] = {
     val extraFirst = if (includeFirst) 0 else 1
     val extraLast = if (includeLast) 0 else 1
     val numGradations = numGrad + extraFirst + extraLast
@@ -26,7 +27,7 @@ case class Gradient(numGrad: Int, last: String, first: String = "000000", includ
     if (includeLast) dropFirst else dropFirst.dropRight(1)
   }
 
-  def toColumn = {
+  def toColumn: ColorPicker.Column = {
     ColorPicker.Column(first, last, gradations, includeFirst, includeLast)
   }
 }
@@ -102,9 +103,21 @@ object ColorPicker {
     includeTopCheckbox.setSelected(includeTop)
     val includeBotCheckbox = new JCheckBox()
     includeBotCheckbox.setSelected(includeBot)
+    val flipButton = new JButton("flip")
+    flipButton.addActionListener(new ActionListener() {
+      def actionPerformed(e: ActionEvent): Unit = {
+        val curTop = topHexField.getText
+        topHexField.setText(botHexField.getText)
+        botHexField.setText(curTop)
+        val curTopCheck = includeTopCheckbox.getModel.isSelected
+        includeTopCheckbox.setSelected(includeBotCheckbox.getModel.isSelected)
+        includeBotCheckbox.setSelected(curTopCheck)
+      }
+    })
     topHexField.setMaximumSize(new Dimension(110, 30))
     botHexField.setMaximumSize(new Dimension(110, 30))
     numField.setMaximumSize(new Dimension(110, 30))
+    flipButton.setMaximumSize(new Dimension(50, 30))
 
     val panel: JPanel = {
       val p = new JPanel()
@@ -115,6 +128,7 @@ object ColorPicker {
       p.add(colorSquares)
       p.add(botHexField)
       p.add(includeBotCheckbox)
+      p.add(flipButton)
       p
     }
 
