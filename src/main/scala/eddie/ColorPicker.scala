@@ -7,6 +7,8 @@ import java.awt.image.BufferedImage
 import eddie.MyImage.{ColorInt, MandelImage}
 import javafx.scene.control.ColorPicker
 import javax.swing.{BoxLayout, Icon, ImageIcon, JButton, JCheckBox, JFrame, JLabel, JPanel, JTextField}
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
@@ -14,13 +16,18 @@ object ColorPicker {
   val squareSize = 50
   val maxPixels = 600
 
-  def colorRect(x: Int, y: Int, color: ColorInt): JLabel = {
+  def colorRectImg(x: Int, y: Int, color: ColorInt): BufferedImage = {
     val img = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB)
     0.until(x).foreach { xIndex =>
       0.until(y).foreach { yIndex =>
         img.setRGB(xIndex, yIndex, color)
       }
     }
+    img
+  }
+
+  def colorRectLabel(x: Int, y: Int, color: ColorInt): JLabel = {
+    val img = colorRectImg(x, y, color)
     val label = new JLabel()
     label.setIcon(new ImageIcon(img))
     label
@@ -47,7 +54,7 @@ object ColorPicker {
   def createColorSquares(colors: List[ColorInt], height: Int = squareSize): JPanel = {
     val realHeight = Math.max(Math.min(height, maxPixels / (colors.size + 1)), 1)
     val panel = new JPanel()
-    val colorSquares = colors.map { c => colorRect(squareSize, realHeight, c) }
+    val colorSquares = colors.map { c => colorRectLabel(squareSize, realHeight, c) }
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS))
     colorSquares.foreach(panel.add)
     panel
@@ -140,33 +147,67 @@ object HexGrid extends App {
 
   val colors = first ::: second ::: third ::: fourth ::: fifth ::: sixth
 
-  val greys = 0.to(256)
+  val greys = 0.to(256).reverse
   val mults = List.tabulate(256)(i => i.toDouble / 256).reverse
   val multAndComplement = mults.zip(mults.reverse)
 
-  def makeGridFromColor(r: Int, g: Int, b: Int) = {
+  val rectFrame = new JFrame
+  rectFrame.setLayout(new FlowLayout)
+  rectFrame.setSize(new Dimension(500, 300))
+  val rectPanel = new JPanel
+  rectPanel.setLayout(new BoxLayout(rectPanel, BoxLayout.X_AXIS))
+  val rectLabel = new JLabel()
+  val selectedColorLabel = new JLabel
+  val copyButton = new JButton("copy hex")
+
+  def setSelectedColor(colorInt: ColorInt): Unit = {
+    val selectedImg = ColorPicker.colorRectImg(100, 100, colorInt)
+    selectedColorLabel.setIcon(new ImageIcon(selectedImg))
+    copyButton.getActionListeners.foreach(copyButton.removeActionListener)
+    copyButton.addActionListener(new ActionListener {
+      def actionPerformed(e: ActionEvent): Unit = {
+        val hexString = colorInt.toHexString.substring(2)
+        println(hexString)
+        Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(hexString), null)
+      }
+    })
+    rectFrame.setVisible(true)
+  }
+
+  def makeGridFromColor(r: Int, g: Int, b: Int): BufferedImage = {
     val shades = mults.map { m => ((r * m).toInt, (g * m).toInt, (b * m).toInt) }
     val rectImg = new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB)
-    greys.zip(shades).zipWithIndex.foreach { case ((grey, (sr, sg, sb)), y) =>
-      multAndComplement.zipWithIndex.foreach { case ((m1, m2), x) =>
+    val colorInts = greys.zip(shades).zipWithIndex.map { case ((grey, (sr, sg, sb)), y) =>
+      multAndComplement.zipWithIndex.map { case ((m1, m2), x) =>
         val multGrey = grey * m1
         val rr = (multGrey + sr * m2).toInt
         val gg = (multGrey + sg * m2).toInt
         val bb = (multGrey + sb * m2).toInt
         val colorInt = new Color(rr, gg, bb).getRGB
         rectImg.setRGB(x, y, colorInt)
+        colorInt
       }
     }
+
+    rectLabel.addMouseListener(new MouseListener {
+      def mouseClicked(e: MouseEvent): Unit = {
+        val (x, y) = (e.getX, e.getY)
+        val colorInt = colorInts(y)(x)
+        setSelectedColor(colorInt)
+      }
+
+      def mousePressed(e: MouseEvent): Unit = {}
+      def mouseReleased(e: MouseEvent): Unit = {}
+      def mouseEntered(e: MouseEvent): Unit = {}
+      def mouseExited(e: MouseEvent): Unit = {}
+    })
     rectImg
   }
 
-  val rectFrame = new JFrame
-  rectFrame.setLayout(new FlowLayout)
-  rectFrame.setSize(new Dimension(300, 300))
-  val rectPanel = new JPanel
-  rectPanel.setLayout(new FlowLayout)
-  val rectLabel = new JLabel()
+
   rectPanel.add(rectLabel)
+  rectPanel.add(selectedColorLabel)
+  rectPanel.add(copyButton)
   rectFrame.add(rectPanel)
 
 
@@ -193,7 +234,7 @@ object HexGrid extends App {
       val (r, g, b) = colors(index)
       val gridImg = makeGridFromColor(r, g, b)
       rectLabel.setIcon(new ImageIcon(gridImg))
-      rectFrame.setVisible(true)
+      setSelectedColor(new Color(r, g, b).getRGB)
     }
 
     def mousePressed(e: MouseEvent): Unit = {}
@@ -204,7 +245,6 @@ object HexGrid extends App {
   panel.add(label)
   frame.add(panel)
   frame.setVisible(true)
-
 }
 
 object Z extends App {
