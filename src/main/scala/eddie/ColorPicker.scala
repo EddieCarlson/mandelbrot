@@ -1,6 +1,6 @@
 package eddie
 
-import java.awt.event.{ActionEvent, ActionListener}
+import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.awt.image.BufferedImage
 
@@ -113,6 +113,98 @@ object ColorPicker {
       p
     }
   }
+}
+
+object HexGrid extends App {
+  def colorInt(i: Int) = {
+    val str = i.toHexString
+    val paddedStr = if (str.length > 6) {
+      str.substring(str.length - 6)
+    } else {
+      val padding = 6 - str.length
+      s"${"0" * padding}$str"
+    }
+    Color.decode(s"#$paddedStr").getRGB
+  }
+
+  val size = 64
+  val sizeMinus1 = size - 1
+  val mult = 256 / size
+
+  val first = List.tabulate(size)(i => (255, i * mult, 0))
+  val second = List.tabulate(size)(i => (255 - (i * mult), 255, 0))
+  val third = List.tabulate(size)(i => (0, 255, i * mult))
+  val fourth = List.tabulate(size)(i => (0, 255 - (i * mult), 255))
+  val fifth = List.tabulate(size)(i => (i * mult, 0, 255))
+  val sixth = List.tabulate(size)(i => (255, 0, 255 - (i * mult)))
+
+  val colors = first ::: second ::: third ::: fourth ::: fifth ::: sixth
+
+  val greys = 0.to(256)
+  val mults = List.tabulate(256)(i => i.toDouble / 256).reverse
+  val multAndComplement = mults.zip(mults.reverse)
+
+  def makeGridFromColor(r: Int, g: Int, b: Int) = {
+    val shades = mults.map { m => ((r * m).toInt, (g * m).toInt, (b * m).toInt) }
+    val rectImg = new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB)
+    greys.zip(shades).zipWithIndex.foreach { case ((grey, (sr, sg, sb)), y) =>
+      multAndComplement.zipWithIndex.foreach { case ((m1, m2), x) =>
+        val multGrey = grey * m1
+        val rr = (multGrey + sr * m2).toInt
+        val gg = (multGrey + sg * m2).toInt
+        val bb = (multGrey + sb * m2).toInt
+        val colorInt = new Color(rr, gg, bb).getRGB
+        rectImg.setRGB(x, y, colorInt)
+      }
+    }
+    rectImg
+  }
+
+  val rectFrame = new JFrame
+  rectFrame.setLayout(new FlowLayout)
+  rectFrame.setSize(new Dimension(300, 300))
+  val rectPanel = new JPanel
+  rectPanel.setLayout(new FlowLayout)
+  val rectLabel = new JLabel()
+  rectPanel.add(rectLabel)
+  rectFrame.add(rectPanel)
+
+
+  val frame = new JFrame
+  frame.setLayout(new FlowLayout)
+  frame.setSize(new Dimension(size + 100, size * 6 + 100))
+  val panel = new JPanel
+  panel.setLayout(new FlowLayout)
+  val xSize = 30
+  val img = new BufferedImage(xSize, size * 6, BufferedImage.TYPE_INT_ARGB)
+
+  colors.zipWithIndex.foreach { case ((r, g, b), y) =>
+    val colorInt = new Color(r, g, b).getRGB
+    0.until(xSize).foreach { x =>
+      img.setRGB(x, y, colorInt)
+    }
+  }
+
+  val label = new JLabel()
+  label.setIcon(new ImageIcon(img))
+  label.addMouseListener(new MouseListener {
+    def mouseClicked(e: MouseEvent): Unit = {
+      val index = e.getY
+      val (r, g, b) = colors(index)
+      val gridImg = makeGridFromColor(r, g, b)
+      rectLabel.setIcon(new ImageIcon(gridImg))
+      rectFrame.setVisible(true)
+    }
+
+    def mousePressed(e: MouseEvent): Unit = {}
+    def mouseReleased(e: MouseEvent): Unit = {}
+    def mouseEntered(e: MouseEvent): Unit = {}
+    def mouseExited(e: MouseEvent): Unit = {}
+  })
+  panel.add(label)
+  frame.add(panel)
+  frame.setVisible(true)
+
 }
 
 object Z extends App {

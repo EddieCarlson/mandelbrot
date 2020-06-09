@@ -23,11 +23,12 @@ object MyColors {
   )
 
   val greyscale = List(
-    (Color.decode("#000000"), 25)
+    (Color.decode("#000000"), 20)
   )
 
   val ghost = List(
     (Color.decode("#cce0ff"), 12),
     (Color.decode("#353a42"), 10)
   )
+
 }
