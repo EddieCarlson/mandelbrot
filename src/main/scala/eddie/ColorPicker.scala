@@ -8,7 +8,7 @@ import javax.swing._
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)
 
-case class Gradient(numGrad: Int, first: String, last: String = "000000", includeFirst: Boolean = true, includeLast: Boolean = false) {
+case class Gradient(numGrad: Int, last: String, first: String = "000000", includeFirst: Boolean = false, includeLast: Boolean = true) {
   val firstColor = Color.decode(s"#$first")
   val lastColor = Color.decode(s"#$last")
 
@@ -23,8 +23,7 @@ case class Gradient(numGrad: Int, first: String, last: String = "000000", includ
         lastColor.getRed, lastColor.getGreen, lastColor.getBlue, m2)
     }.toList
     val dropFirst = if (includeFirst) gradations else gradations.drop(1)
-    val dropLast = if (includeLast) dropFirst else dropFirst.dropRight(1)
-    dropLast.reverse
+    if (includeLast) dropFirst else dropFirst.dropRight(1)
   }
 
   def toColumn = {
@@ -99,6 +98,7 @@ object ColorPicker {
     val topHexField = new JTextField(topHexCode)
     val botHexField = new JTextField(botHexCode)
     val numField = new JTextField(colorList.size.toString)
+    val includeTopCheckbox = new JCheckBox()
     topHexField.setMaximumSize(new Dimension(110, 30))
     botHexField.setMaximumSize(new Dimension(110, 30))
     numField.setMaximumSize(new Dimension(110, 30))

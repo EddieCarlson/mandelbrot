@@ -242,7 +242,7 @@ object Mandelbrot extends App {
         val newColorInput = colorPanel.columns.map { c =>
           (c.topHexField.getText, c.botHexField.getText, Integer.parseInt(c.numField.getText))
         }
-        val mImgColors = newColorInput.map { case (topHex, botHex, num) => Gradient(num, topHex, botHex) }
+        val mImgColors = newColorInput.map { case (topHex, botHex, num) => Gradient(num, botHex, topHex) }
         val newMImg = mImg.copy(colors = mImgColors)
         setEverything(newMImg)()
       }
