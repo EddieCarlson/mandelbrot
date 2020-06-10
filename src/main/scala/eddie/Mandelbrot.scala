@@ -3,8 +3,8 @@ package eddie
 import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
 
-import javax.swing.{ImageIcon, JButton, JFrame, JLabel, JPanel, JTextField}
-import java.awt.{Color, FlowLayout, GridLayout}
+import javax.swing.{ImageIcon, JButton, JComboBox, JFrame, JLabel, JPanel, JTextField}
+import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -19,19 +19,19 @@ import eddie.ColorPicker.ColorPanel
 import javax.imageio.ImageIO
 
 object MandelbrotFunctions {
-  val maxIterations = 1000
+  val defaultMaxIterations = 1000
 
   def f(z: Complex, c: Complex): Complex = z.squared + c
 
   // returns the number of iterations of `f` applied to `c` to yield a "large" value. returns None if still bounded
   // after 1000 iterations
-  def boundedCount(c: Complex, z: Complex = Complex.zero, count: Int = 0): Option[Int] = {
+  def boundedCount(c: Complex, maxIterations: Int, z: Complex = Complex.zero, count: Int = 0): Option[Int] = {
     if (z.outOfBounds) {
       Some(count)
     } else if (count > maxIterations) {
       None
     } else {
-      boundedCount(c, f(z, c), count + 1)
+      boundedCount(c, maxIterations, f(z, c), count + 1)
     }
   }
 }
@@ -77,44 +77,44 @@ object MyImage {
   val initialBaseColors = MyColors.candy
 
 case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))) {
-    val autoColors: Map[Int, ColorInt] = {
-      def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
-        if (remainingGroups.isEmpty) {
-          acc
-        } else if (remainingColors.isEmpty) {
-          val remainingMap = remainingGroups.map(_._1).map(t => (t, curColor)).toMap
-          acc ++ remainingMap
-        } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
-          val (toAdd, size) :: tail = remainingGroups
-          group(remainingColors, tail, curColor, remainingPixelCount - size, curPixels + size, acc + (toAdd -> curColor))
-        } else {
-          val nextColor :: tail = remainingColors
-          group(tail, remainingGroups, nextColor, remainingPixelCount, 0, acc)
-        }
+  val autoColors: Map[Int, ColorInt] = {
+    def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
+      if (remainingGroups.isEmpty) {
+        acc
+      } else if (remainingColors.isEmpty) {
+        val remainingMap = remainingGroups.map(_._1).map(t => (t, curColor)).toMap
+        acc ++ remainingMap
+      } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
+        val (toAdd, size) :: tail = remainingGroups
+        group(remainingColors, tail, curColor, remainingPixelCount - size, curPixels + size, acc + (toAdd -> curColor))
+      } else {
+        val nextColor :: tail = remainingColors
+        group(tail, remainingGroups, nextColor, remainingPixelCount, 0, acc)
       }
-      val start = System.currentTimeMillis
-      val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == maxIterations)
-      val setupD = System.currentTimeMillis - start
-      println(s"autoColor setup: $setupD millis")
-      val allColors = colors.flatMap(_.gradations)
-      val notInColors = allColors.dropRight(1)
-      val inColor = allColors.last
-      val gro = group(notInColors.tail, nonMax, notInColors.head, nonMax.map(_._2).sum)
-      //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
-      val duration = System.currentTimeMillis - start
-      println(s"autoColors: $duration millis")
-      gro + (maxIterations -> inColor)
     }
-
     val start = System.currentTimeMillis
-    autoColors.foreach { case (bound, color) =>
-      pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
-        img.setRGB(x, y, color)
-      }
-    }
+    val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == g.maxIterations)
+    val setupD = System.currentTimeMillis - start
+    println(s"autoColor setup: $setupD millis")
+    val allColors = colors.flatMap(_.gradations)
+    val notInColors = allColors.dropRight(1)
+    val inColor = allColors.last
+    val gro = group(notInColors.tail, nonMax, notInColors.head, nonMax.map(_._2).sum)
+    //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
     val duration = System.currentTimeMillis - start
-    println(s"applyColors: $duration millis")
+    println(s"autoColors: $duration millis")
+    gro + (g.maxIterations -> inColor)
   }
+
+  val start = System.currentTimeMillis
+  autoColors.foreach { case (bound, color) =>
+    pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
+      img.setRGB(x, y, color)
+    }
+  }
+  val duration = System.currentTimeMillis - start
+  println(s"applyColors: $duration millis")
+}
 
 
   def fromGrid(g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))): MandelImage = {
@@ -125,24 +125,6 @@ case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)
     val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
 
     val img = new BufferedImage(g.rPixels, imgYPixels, BufferedImage.TYPE_INT_ARGB)
-
-    def toBound(c: Complex): Int = {
-      val count = boundedCount(c)
-      count.getOrElse(maxIterations)
-    }
-
-    def pixelsWithIndex = {
-      val withIndex = g.gridPixels.zipWithIndex
-      if (g.rSize <= 4000) {
-        withIndex.par
-      } else {
-        withIndex
-      }
-    }
-
-    def bGrid = g.gridPixels.zipWithIndex.flatMap { case (row, h) =>
-      row.zipWithIndex.map { case (c, w) => (toBound(c), (w, h)) }
-    }.toList
 
     // TODO: does mirroring still work?
 //    val setRGB = if (mirror) {
@@ -155,12 +137,9 @@ case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)
 //    }
 
     val pgStart = System.currentTimeMillis
-    val gg = bGrid
-    val bgDuration = System.currentTimeMillis - pgStart
-    println(s"make bGrid: $bgDuration")
-    val pixelGroups = gg.groupBy(_._1).mapValues(_.map(_._2))
+    val pixelGroups = g.escapeBounds.groupBy(_._1).mapValues(_.map(_._2).toList)
     val pgDuration = System.currentTimeMillis - pgStart
-    println(s"make pixelGroups: $pgDuration millis")
+    println(s"escape bounds and pixelGroups: $pgDuration millis")
 
     val mi = MandelImage(img, pixelGroups, g, colors)
     val duration = System.currentTimeMillis - start
@@ -181,7 +160,7 @@ object Mandelbrot extends App {
 //  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
 //    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
 //  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
-  val g = Grid(rPixels = 1200)
+  val g = Grid(rPixels = 1000)
 //  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
 
   val mirrorGate = true
@@ -193,31 +172,45 @@ object Mandelbrot extends App {
   val imgFrame = new JFrame()
   val lbl = new JLabel
   val zoomOutButton = new JButton("zoom out")
-  val saveButton = new JButton("save")
-  val saveHighRes = new JButton("save high res")
+  val saveButton = new JButton("save at res:")
   val saveAs = new JTextField("my_image")
+  val saveOptionList = List(
+    "shown" -> None,
+    "2K" -> Some(2000),
+    "4K" -> Some(4000),
+    "6K" -> Some(6000),
+    "8K" -> Some(8000)
+  )
+  val saveOptionMap = saveOptionList.toMap
+  val saveOptions = new JComboBox(saveOptionList.map(_._1).toArray)
   val colorPanelWrapper = new JPanel()
   imgFrame.setLayout(new FlowLayout)
   imgFrame.setSize(g.rPixels + 10, g.iPixels + 65)
+  val sizeField = new JTextField(g.rPixels.toString)
+  val sizeButton = new JButton("change size")
   imgFrame.add(lbl)
+  imgFrame.add(new JLabel("xPixels:"))
+  imgFrame.add(sizeField)
+  imgFrame.add(sizeButton)
   imgFrame.add(zoomOutButton)
   imgFrame.add(saveButton)
-  imgFrame.add(saveHighRes)
+  imgFrame.add(saveOptions)
+  imgFrame.add(new JLabel("max iter:"))
+  val iterationField = new JTextField(g.maxIterations.toString)
+  val iterationButton = new JButton("set iterations")
+  imgFrame.add(iterationField)
+  imgFrame.add(iterationButton)
   val colorFrame = new JFrame()
   colorFrame.setLayout(new FlowLayout)
   colorFrame.setSize(500, 800)
   colorFrame.add(colorPanelWrapper)
 
-  val dateFormat = new SimpleDateFormat("yyyy-MM-dd_hh-mm-ss")
+  val dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
   val date = new Date()
   val saveDirPath = s"$workLaptopDir/${dateFormat.format(date)}"
   val saveNum = new AtomicInteger(1)
 
-  def fromImg(mImg: MandelImage) = {
-    ColorPicker.ColorPanel(mImg.colors)
-  }
-
-  def setEverything(mImg: MandelImage)(colorPanel: ColorPanel = fromImg(mImg)): Unit = {
+  def setEverything(mImg: MandelImage)(colorPanel: ColorPanel = ColorPanel(mImg.colors)): Unit = {
     lbl.setIcon(new ImageIcon(mImg.img))
     colorPanelWrapper.removeAll()
     colorPanelWrapper.add(colorPanel.panel)
@@ -245,6 +238,23 @@ object Mandelbrot extends App {
       }
     })
 
+    sizeButton.getActionListeners.foreach(sizeButton.removeActionListener)
+    sizeButton.addActionListener(new ActionListener {
+      def actionPerformed(e: ActionEvent): Unit = {
+        val newGrid = mImg.g.copy(rPixels = Integer.parseInt(sizeField.getText))
+        imgFrame.setSize(newGrid.rPixels + 10, newGrid.iPixels + 65)
+        setEverything(MyImage.fromGrid(newGrid, mImg.colors))()
+      }
+    })
+
+    iterationButton.getActionListeners.foreach(iterationButton.removeActionListener)
+    iterationButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val newGrid = mImg.g.copy(maxIterations = Integer.parseInt(iterationField.getText))
+        setEverything(MyImage.fromGrid(newGrid, mImg.colors))()
+      }
+    })
+
     zoomOutButton.getActionListeners.foreach(zoomOutButton.removeActionListener)
     zoomOutButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
@@ -254,7 +264,16 @@ object Mandelbrot extends App {
 
     saveButton.getActionListeners.foreach(saveButton.removeActionListener)
     saveButton.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = saveImage(mImg)
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val img = saveOptions.getSelectedItem match {
+          case x: String =>
+            saveOptionMap(x).map { rPixels =>
+              val newGrid = mImg.g.copy(rPixels = rPixels)
+              MyImage.fromGrid(newGrid, mImg.colors)
+            }.getOrElse(mImg)
+        }
+        saveImage(img)
+      }
     })
 
     colorPanel.addColumn.addActionListener(new ActionListener {
@@ -272,15 +291,6 @@ object Mandelbrot extends App {
         val (before, after) = colorPanel.gradients.splitAt(index)
         val newPanel = ColorPanel(before ::: after.drop(1))
         setEverything(mImg)(newPanel)
-      }
-    })
-
-    saveHighRes.getActionListeners.foreach(saveHighRes.removeActionListener)
-    saveHighRes.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val bigGrid = mImg.g.copy(rPixels = 6000)
-        val bigMimg = MyImage.fromGrid(bigGrid, mImg.colors)
-        saveImage(bigMimg, "big_")
       }
     })
 

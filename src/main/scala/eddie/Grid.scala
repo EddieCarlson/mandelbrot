@@ -1,6 +1,8 @@
 package eddie
 
-case class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1) {
+import eddie.MandelbrotFunctions._
+
+case class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double = -1, iMax: Double = 1, maxIterations: Int = defaultMaxIterations) {
   val rSize = rMax - rMin
   val iSize = iMax - iMin
   val pixelsPerUnit = rPixels / rSize
@@ -15,6 +17,15 @@ case class Grid(rPixels: Int, rMin: Double = -2, rMax: Double = 1, iMin: Double 
 
   def gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
 //  val gridPixels: Stream[Stream[Complex]] = rows.map { yVal => row.map(Complex(_, yVal)) }
+
+  def toBound(c: Complex): Int = {
+    val count = boundedCount(c, maxIterations)
+    count.getOrElse(maxIterations)
+  }
+
+  def escapeBounds = gridPixels.zipWithIndex.flatMap { case (r, h) =>
+    r.zipWithIndex.map { case (c, w) => (toBound(c), (w, h)) }
+  }
 
   def pixelToCoord(x: Int, y: Int): (Double, Double) = (rAtIndex(x), iAtIndex(y))
 
