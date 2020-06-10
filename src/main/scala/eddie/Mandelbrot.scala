@@ -202,7 +202,7 @@ object Mandelbrot extends App {
   imgFrame.add(iterationButton)
   val colorFrame = new JFrame()
   colorFrame.setLayout(new FlowLayout)
-  colorFrame.setSize(500, 800)
+  colorFrame.setSize(400, 700)
   colorFrame.add(colorPanelWrapper)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")

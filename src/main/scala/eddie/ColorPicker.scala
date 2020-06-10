@@ -122,6 +122,7 @@ object ColorPicker {
     val panel: JPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
+      p.setMaximumSize(new Dimension(70, 1000))
       p.add(numField)
       p.add(includeTopCheckbox)
       p.add(topHexField)
@@ -142,6 +143,7 @@ object ColorPicker {
 
   case class ColorPanel(gradients: List[Gradient]) {
     val allColorSquares = createColorSquares(gradients.flatMap(_.gradations), squareSize / 2)
+    allColorSquares.setMaximumSize(new Dimension(100, 1000))
 
     val columns = gradients.map(_.toColumn)
     val columnPanel = {
