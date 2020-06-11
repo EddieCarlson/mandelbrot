@@ -205,6 +205,8 @@ object ColorPicker {
 object ColorPanelHelpText {
   val frame = new JFrame()
   val list = List(
+    new JLabel("Click on the mandelbrot image to zoom"),
+    new JLabel(""),
     new JLabel("Column fields, top to bottom:"),
     new JLabel("Top text box is number of colors in the gradient"),
     new JLabel("Top check box is whether to include the top color itself in the gradient"),
@@ -222,9 +224,12 @@ object ColorPanelHelpText {
     new JLabel("You can add a gradient by using \"Add col at index\", specifying the index in the box to the right"),
     new JLabel("Index 0 will always add a gradient to the left of the first gradient"),
     new JLabel("Index 1 will add a gradient to the right of the first gradient"),
-    new JLabel("If you have 4 gradients currently, Index 4 will add one to the right of all the gradients.")
+    new JLabel("If you have 4 gradients currently, Index 4 will add one to the right of all the gradients."),
+    new JLabel(""),
+    new JLabel("Click the rainbow column in the hex helper to select a color square"),
+    new JLabel("Click within the color square to select a hex value. copy it with \"copy hex\"")
   )
   frame.setLayout(new GridLayout(list.size, 1))
-  frame.setSize(600, 400)
+  frame.setSize(600, 450)
   list.foreach(frame.add)
 }
