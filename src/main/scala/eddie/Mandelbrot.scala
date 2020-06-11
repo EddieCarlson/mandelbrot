@@ -1,24 +1,15 @@
 package eddie
 
+import java.awt.FlowLayout
 import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
-import java.awt.image.BufferedImage
-import java.awt.Rectangle
-
-import javax.swing.{ImageIcon, JButton, JComboBox, JFileChooser, JFrame, JLabel, JPanel, JTextField}
-import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
-import scala.annotation.tailrec
-
-import MandelbrotFunctions._
-import scala.collection.mutable
-import scala.collection.JavaConverters._
 
 import eddie.ColorPicker.ColorPanel
-import eddie.MandelImage.ColorInt
 import javax.imageio.ImageIO
+import javax.swing._
 
 object MandelbrotFunctions {
   val defaultMaxIterations = 1000
