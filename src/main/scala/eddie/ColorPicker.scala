@@ -2,7 +2,7 @@ package eddie
 
 import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.image.BufferedImage
-import java.awt.{Color, Dimension}
+import java.awt.{Color, Dimension, GridLayout}
 
 import eddie.MandelImage.ColorInt
 import javax.swing._
@@ -187,6 +187,8 @@ object ColorPicker {
       p
     }
 
+    val helpButton = new JButton("Help")
+
     val panel: JPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
@@ -194,7 +196,35 @@ object ColorPicker {
       p.add(columnPanel)
       p.add(changeColorsButton)
       p.add(addRemovePanel)
+      p.add(helpButton)
       p
     }
   }
+}
+
+object ColorPanelHelpText {
+  val frame = new JFrame()
+  val list = List(
+    new JLabel("Column fields, top to bottom:"),
+    new JLabel("Top text box is number of colors in the gradient"),
+    new JLabel("Top check box is whether to include the top color itself in the gradient"),
+    new JLabel("Next text box is the color of the top/beginning of the gradient"),
+    new JLabel("text box below the gradient is bottom/end of the gradient"),
+    new JLabel("Check box below that is whether to include the last color itself"),
+    new JLabel("\"flip\" button will reverse the gradient"),
+    new JLabel(""),
+    new JLabel("You must click \"apply colors\" to change the image."),
+    new JLabel(""),
+    new JLabel("Excluding the beginning/end of a gradient is particularly useful if you want to start/end"),
+    new JLabel("your gradient with black (000000),, but you want to fade towards black without actually"),
+    new JLabel("ending with black itself."),
+    new JLabel(""),
+    new JLabel("You can add a gradient by using \"Add col at index\", specifying the index in the box to the right"),
+    new JLabel("Index 0 will always add a gradient to the left of the first gradient"),
+    new JLabel("Index 1 will add a gradient to the right of the first gradient"),
+    new JLabel("If you have 4 gradients currently, Index 4 will add one to the right of all the gradients.")
+  )
+  frame.setLayout(new GridLayout(list.size, 1))
+  frame.setSize(600, 400)
+  list.foreach(frame.add)
 }

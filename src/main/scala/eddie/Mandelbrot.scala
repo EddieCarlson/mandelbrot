@@ -106,6 +106,12 @@ object Mandelbrot extends App {
     colorPanelWrapper.removeAll()
     colorPanelWrapper.add(colorPanel.panel)
 
+    colorPanel.helpButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        ColorPanelHelpText.frame.setVisible(true)
+      }
+    })
+
     lbl.getMouseListeners.foreach(lbl.removeMouseListener)
     lbl.addMouseListener(new MouseListener {
       override def mouseReleased(mouseEvent: MouseEvent): Unit = {
