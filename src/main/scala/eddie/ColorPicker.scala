@@ -4,7 +4,7 @@ import java.awt.event.{ActionEvent, ActionListener}
 import java.awt.image.BufferedImage
 import java.awt.{Color, Dimension}
 
-import eddie.MyImage.ColorInt
+import eddie.MandelImage.ColorInt
 import javax.swing._
 
 case class ColorColumn(hexField: JTextField, numField: JTextField)

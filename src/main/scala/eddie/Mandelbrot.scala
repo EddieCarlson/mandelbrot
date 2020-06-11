@@ -2,6 +2,7 @@ package eddie
 
 import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
+import java.awt.Rectangle
 
 import javax.swing.{ImageIcon, JButton, JComboBox, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, Dimension, FlowLayout, GridLayout}
@@ -11,11 +12,11 @@ import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 
 import MandelbrotFunctions._
-import eddie.MyImage.MandelImage
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 import eddie.ColorPicker.ColorPanel
+import eddie.MandelImage.ColorInt
 import javax.imageio.ImageIO
 
 object MandelbrotFunctions {
@@ -33,118 +34,6 @@ object MandelbrotFunctions {
     } else {
       boundedCount(c, maxIterations, f(z, c), count + 1)
     }
-  }
-}
-
-object MyImage {
-  val mirrorGate = true
-    val reds = List(
-      ("#160009", 4),
-      ("#330019", 6),
-      ("#99004c", 10),
-      ("#cc0066", 15),
-      ("#ff007f", 20)
-    )
-
-    val purps = List(
-      ("#330066", 25),
-      ("#4c0099", 30),
-      ("#6600cc", 35),
-      ("#7f00ff", 40),
-      ("#9933ff", 45)
-    )
-
-    val blues = List(
-      ("#006666", 60),
-      ("#009999", 80),
-      ("#00CCCC", 120),
-      ("#00FFFF", 250),
-    )
-
-  def mult(c: Color, f: Double): Color = {
-    new Color((c.getRed * f).toInt, (c.getGreen * f).toInt, (c.getBlue * f).toInt)
-  }
-
-  type ColorInt = Int
-
-  def expandBaseColors(baseColors: List[(Color, Int)]): List[ColorInt] = {
-    baseColors.flatMap { case (color, num) =>
-      val multipliers = 0.until(num).map { i => 1 - (i.toDouble / num) }.reverse
-      multipliers.map(mult(color, _)).map(_.getRGB)
-    }
-  }
-
-  val initialBaseColors = MyColors.candy
-
-case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))) {
-  val autoColors: Map[Int, ColorInt] = {
-    def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
-      if (remainingGroups.isEmpty) {
-        acc
-      } else if (remainingColors.isEmpty) {
-        val remainingMap = remainingGroups.map(_._1).map(t => (t, curColor)).toMap
-        acc ++ remainingMap
-      } else if (curPixels.toDouble / remainingPixelCount < 1.0 / remainingColors.size.toDouble) {
-        val (toAdd, size) :: tail = remainingGroups
-        group(remainingColors, tail, curColor, remainingPixelCount - size, curPixels + size, acc + (toAdd -> curColor))
-      } else {
-        val nextColor :: tail = remainingColors
-        group(tail, remainingGroups, nextColor, remainingPixelCount, 0, acc)
-      }
-    }
-    val start = System.currentTimeMillis
-    val nonMax = pixelGroups.mapValues(_.size).toList.sortBy(_._1).filterNot(_._1 == g.maxIterations)
-    val setupD = System.currentTimeMillis - start
-    println(s"autoColor setup: $setupD millis")
-    val allColors = colors.flatMap(_.gradations)
-    val notInColors = allColors.dropRight(1)
-    val inColor = allColors.last
-    val gro = group(notInColors.tail, nonMax, notInColors.head, nonMax.map(_._2).sum)
-    //      println(gro.groupBy(_._2).mapValues(_.keys.flatMap(k => pixelGroups.getOrElse(k, Set.empty)).size).values) // this line is very expensive: 800 millis
-    val duration = System.currentTimeMillis - start
-    println(s"autoColors: $duration millis")
-    gro + (g.maxIterations -> inColor)
-  }
-
-  val start = System.currentTimeMillis
-  autoColors.foreach { case (bound, color) =>
-    pixelGroups.getOrElse(bound, Set.empty).foreach { case (x, y) =>
-      img.setRGB(x, y, color)
-    }
-  }
-  val duration = System.currentTimeMillis - start
-  println(s"applyColors: $duration millis")
-}
-
-
-  def fromGrid(g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))): MandelImage = {
-    println(g)
-    val start = System.currentTimeMillis
-    val mirror = mirrorGate && g.iMin == 0
-
-    val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
-
-    val img = new BufferedImage(g.rPixels, imgYPixels, BufferedImage.TYPE_INT_ARGB)
-
-    // TODO: does mirroring still work?
-//    val setRGB = if (mirror) {
-//      (w: Int, h: Int, c: Int) => {
-//        img.setRGB(w, h, c)
-//        img.setRGB(w, h + ((g.iPixels - h) * 2) - 1, c)
-//      }
-//    } else {
-//      (w: Int, h: Int, c: Int) => img.setRGB(w, h, c)
-//    }
-
-    val pgStart = System.currentTimeMillis
-    val pixelGroups = g.escapeBounds.groupBy(_._1).mapValues(_.map(_._2).toList)
-    val pgDuration = System.currentTimeMillis - pgStart
-    println(s"escape bounds and pixelGroups: $pgDuration millis")
-
-    val mi = MandelImage(img, pixelGroups, g, colors)
-    val duration = System.currentTimeMillis - start
-    println(s"fromGrid: $duration millis")
-    mi
   }
 }
 
@@ -168,7 +57,7 @@ object Mandelbrot extends App {
 
   val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
 
-  val startingMandelImg = MyImage.fromGrid(g)
+  val startingMandelImg = MandelImage.fromGrid(g)
   val imgFrame = new JFrame()
   val lbl = new JLabel
   val zoomOutButton = new JButton("zoom out")
@@ -220,7 +109,7 @@ object Mandelbrot extends App {
       override def mouseClicked(mouseEvent: MouseEvent): Unit = {
         val point = mouseEvent.getPoint
         val newGrid = mImg.g.zoomCenteredOn(point.x, point.y)
-        val newMImg = MyImage.fromGrid(newGrid, mImg.colors)
+        val newMImg = MandelImage.fromGrid(newGrid, mImg.colors)
         setEverything(newMImg)()
       }
 
@@ -243,7 +132,7 @@ object Mandelbrot extends App {
       def actionPerformed(e: ActionEvent): Unit = {
         val newGrid = mImg.g.copy(rPixels = Integer.parseInt(sizeField.getText))
         imgFrame.setSize(newGrid.rPixels + 10, newGrid.iPixels + 65)
-        setEverything(MyImage.fromGrid(newGrid, mImg.colors))()
+        setEverything(MandelImage.fromGrid(newGrid, mImg.colors))()
       }
     })
 
@@ -251,14 +140,14 @@ object Mandelbrot extends App {
     iterationButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
         val newGrid = mImg.g.copy(maxIterations = Integer.parseInt(iterationField.getText))
-        setEverything(MyImage.fromGrid(newGrid, mImg.colors))()
+        setEverything(MandelImage.fromGrid(newGrid, mImg.colors))()
       }
     })
 
     zoomOutButton.getActionListeners.foreach(zoomOutButton.removeActionListener)
     zoomOutButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        setEverything(MyImage.fromGrid(mImg.g.zoomOut, mImg.colors))()
+        setEverything(MandelImage.fromGrid(mImg.g.zoomOut, mImg.colors))()
       }
     })
 
@@ -269,7 +158,7 @@ object Mandelbrot extends App {
           case x: String =>
             saveOptionMap(x).map { rPixels =>
               val newGrid = mImg.g.copy(rPixels = rPixels)
-              MyImage.fromGrid(newGrid, mImg.colors)
+              MandelImage.fromGrid(newGrid, mImg.colors)
             }.getOrElse(mImg)
         }
         saveImage(img)
