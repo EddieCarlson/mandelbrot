@@ -4,7 +4,7 @@ import java.awt.image.BufferedImage
 
 import eddie.MandelImage.ColorInt
 
-case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[Gradient] = MandelImage.initialBaseColors.map(Function.tupled(Gradient.fromColor))) {
+case class MandelImage(img: BufferedImage, pixelGroups: Map[Int, List[(Int, Int)]], g: Grid, colors: List[Gradient] = MandelImage.initialBaseColors) {
   val autoColors: Map[Int, ColorInt] = {
     def group(remainingColors: List[Int], remainingGroups: List[(Int, Int)], curColor: Int, remainingPixelCount: Int, curPixels: Int = 0, acc: Map[Int, Int] = Map.empty): Map[Int, Int] = {
       if (remainingGroups.isEmpty) {
@@ -51,7 +51,7 @@ object MandelImage{
   val initialBaseColors = MyColors.candy
   val mirrorGate = true
 
-  def fromGrid(g: Grid, colors: List[Gradient] = initialBaseColors.map(Function.tupled(Gradient.fromColor))): MandelImage = {
+  def fromGrid(g: Grid, colors: List[Gradient] = initialBaseColors): MandelImage = {
     println(g)
     val start = System.currentTimeMillis
     val mirror = mirrorGate && g.iMin == 0

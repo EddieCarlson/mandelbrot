@@ -5,7 +5,7 @@ import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
 import java.awt.{Color, Dimension, FlowLayout, Toolkit}
 
-import eddie.MyImage.ColorInt
+import eddie.MandelImage.ColorInt
 import javax.swing._
 
 object HexHelper {

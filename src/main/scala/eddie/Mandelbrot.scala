@@ -10,6 +10,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
+import scala.annotation.tailrec
 
 import MandelbrotFunctions._
 import scala.collection.mutable
@@ -106,7 +107,7 @@ object Mandelbrot extends App {
 
     lbl.getMouseListeners.foreach(lbl.removeMouseListener)
     lbl.addMouseListener(new MouseListener {
-      override def mouseClicked(mouseEvent: MouseEvent): Unit = {
+      override def mouseReleased(mouseEvent: MouseEvent): Unit = {
         val point = mouseEvent.getPoint
         val newGrid = mImg.g.zoomCenteredOn(point.x, point.y)
         val newMImg = MandelImage.fromGrid(newGrid, mImg.colors)
@@ -114,7 +115,7 @@ object Mandelbrot extends App {
       }
 
       override def mousePressed(mouseEvent: MouseEvent): Unit = {}
-      override def mouseReleased(mouseEvent: MouseEvent): Unit = {}
+      override def mouseClicked(mouseEvent: MouseEvent): Unit = {}
       override def mouseEntered(mouseEvent: MouseEvent): Unit = {}
       override def mouseExited(mouseEvent: MouseEvent): Unit = {}
     })
@@ -180,6 +181,17 @@ object Mandelbrot extends App {
         val (before, after) = colorPanel.gradients.splitAt(index)
         val newPanel = ColorPanel(before ::: after.drop(1))
         setEverything(mImg)(newPanel)
+      }
+    })
+
+    colorPanel.colorOptionsBox.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val selectedColors = colorPanel.colorOptionsBox.getSelectedItem
+        selectedColors match {
+          case s: String =>
+            val newColors = MyColors.colorMap.get(s)
+            newColors.foreach(c => setEverything(mImg.copy(colors = c))())
+        }
       }
     })
 

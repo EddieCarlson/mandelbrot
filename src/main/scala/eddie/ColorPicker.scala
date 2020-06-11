@@ -144,6 +144,18 @@ object ColorPicker {
   case class ColorPanel(gradients: List[Gradient]) {
     val allColorSquares = createColorSquares(gradients.flatMap(_.gradations), squareSize / 2)
     allColorSquares.setMaximumSize(new Dimension(100, 1000))
+    val colorOptionsBox = new JComboBox(("none" :: MyColors.colors.map(_._1)).toArray)
+    colorOptionsBox.setSelectedItem(MyColors.reverseMap.getOrElse(gradients, "none"))
+    colorOptionsBox.setMaximumSize(new Dimension(100, 30))
+
+    val presetPanel = {
+      val p = new JPanel()
+      p.setLayout(new BoxLayout(p, BoxLayout.X_AXIS))
+      val label = new JLabel("color presets:")
+      label.setMaximumSize(new Dimension(100, 30))
+      p.add(label)
+      p.add(colorOptionsBox)
+    }
 
     val columns = gradients.map(_.toColumn)
     val columnPanel = {
@@ -178,6 +190,7 @@ object ColorPicker {
     val panel: JPanel = {
       val p = new JPanel()
       p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS))
+      p.add(presetPanel)
       p.add(columnPanel)
       p.add(changeColorsButton)
       p.add(addRemovePanel)
