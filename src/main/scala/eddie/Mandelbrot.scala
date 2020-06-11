@@ -4,7 +4,7 @@ import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseListener}
 import java.awt.image.BufferedImage
 import java.awt.Rectangle
 
-import javax.swing.{ImageIcon, JButton, JComboBox, JFrame, JLabel, JPanel, JTextField}
+import javax.swing.{ImageIcon, JButton, JComboBox, JFileChooser, JFrame, JLabel, JPanel, JTextField}
 import java.awt.{Color, Dimension, FlowLayout, GridLayout}
 import java.io.{BufferedWriter, File, FileWriter}
 import java.text.SimpleDateFormat
@@ -99,6 +99,7 @@ object Mandelbrot extends App {
   val date = new Date()
   val saveDirPath = s"$workLaptopDir/${dateFormat.format(date)}"
   val saveNum = new AtomicInteger(1)
+  var lastSavePath: Option[String] = None
 
   def setEverything(mImg: MandelImage)(colorPanel: ColorPanel = ColorPanel(mImg.colors)): Unit = {
     lbl.setIcon(new ImageIcon(mImg.img))
@@ -155,14 +156,23 @@ object Mandelbrot extends App {
     saveButton.getActionListeners.foreach(saveButton.removeActionListener)
     saveButton.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val img = saveOptions.getSelectedItem match {
-          case x: String =>
-            saveOptionMap(x).map { rPixels =>
-              val newGrid = mImg.g.copy(rPixels = rPixels)
-              MandelImage.fromGrid(newGrid, mImg.colors)
-            }.getOrElse(mImg)
+        val saveFrame = new JFrame()
+        val saveFileChooser = new JFileChooser()
+        lastSavePath.foreach(p => saveFileChooser.setCurrentDirectory(new File(p)))
+        val selection = saveFileChooser.showSaveDialog(saveFrame)
+        if (selection == JFileChooser.APPROVE_OPTION) {
+          val filepath = saveFileChooser.getSelectedFile
+          lastSavePath = Some(filepath.getAbsoluteFile.getParent)
+          val img = saveOptions.getSelectedItem match {
+            case x: String =>
+              saveOptionMap(x).map { rPixels =>
+                val newGrid = mImg.g.copy(rPixels = rPixels)
+                MandelImage.fromGrid(newGrid, mImg.colors)
+              }.getOrElse(mImg)
+            case _ => mImg
+          }
+          saveImage(img, filepath.getAbsolutePath)
         }
-        saveImage(img)
       }
     })
 
@@ -202,13 +212,10 @@ object Mandelbrot extends App {
   setEverything(startingMandelImg)()
   HexHelper.frame.setVisible(true)
 
-  def saveImage(mImg: MandelImage, filePrefix: String = ""): Unit = {
-    val dir = new File(saveDirPath)
-    if (!dir.exists) dir.mkdir
-    val saveNumPath = s"$saveDirPath/$filePrefix${saveNum.getAndIncrement}"
-    val imgFile = new File(s"$saveNumPath.png")
+  def saveImage(mImg: MandelImage, filePath: String): Unit = {
+    val imgFile = new File(s"$filePath.png")
     ImageIO.write(mImg.img, "png", imgFile)
-    val infoFile = new File(s"${saveNumPath}_info.txt")
+    val infoFile = new File(s"${filePath}_info.txt")
     infoFile.createNewFile
     val infoWriter = new FileWriter(infoFile.getAbsoluteFile)
     val infoBufferWriter = new BufferedWriter(infoWriter)
