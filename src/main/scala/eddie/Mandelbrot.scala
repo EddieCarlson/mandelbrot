@@ -192,8 +192,6 @@ object Mandelbrot extends App {
   HexHelper.frame.setVisible(true)
 
   def saveImage(mImg: MandelImage, filePath: String): Unit = {
-    val imgFile = new File(s"$filePath.png")
-    ImageIO.write(mImg.img, "png", imgFile)
     val infoFile = new File(s"${filePath}_info.txt")
     infoFile.createNewFile
     val infoWriter = new FileWriter(infoFile.getAbsoluteFile)
@@ -203,5 +201,7 @@ object Mandelbrot extends App {
     val writeableColors = mImg.colors
     infoBufferWriter.write(writeableColors.toString)
     infoBufferWriter.close()
+    val imgFile = new File(s"$filePath.png")
+    ImageIO.write(mImg.img, "png", imgFile)
   }
 }
