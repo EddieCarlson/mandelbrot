@@ -198,22 +198,3 @@ object ColorPicker {
     }
   }
 }
-
-object HexGrid extends App {
-  def colorInt(i: Int) = {
-    val str = i.toHexString
-    val paddedStr = if (str.length > 6) {
-      str.substring(str.length - 6)
-    } else {
-      val padding = 6 - str.length
-      s"${"0" * padding}$str"
-    }
-    Color.decode(s"#$paddedStr").getRGB
-  }
-
-}
-
-object Z extends App {
-  val input = List(("ff007f", 4), ("9933ff", 4), ("00BFBF", 4))
-  val frame = new JFrame()
-}
