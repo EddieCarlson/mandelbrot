@@ -30,26 +30,9 @@ object MandelbrotFunctions {
 }
 
 object Mandelbrot extends App {
-  val start = System.currentTimeMillis
-
-  val personalLaptopDir = "/Users/eddie/IdeaProjects/mandelbrot"
-  val workLaptopDir = "/Users/eddie.carlson/developer/eddie/mandelbrot/explorer_images"
-
-  //  val g = new HalfGrid(20000)
-  //  val g = new Grid(900)
-
-//  val g = new Grid(rPixels = 120, rMin = 1.16 - 2, rMax = 1.30 - 2, iMin = 1.0356 - 1, iMax = 1.259 - 1)
-//    val g = new Grid(rPixels = 15000, rMin = -0.6704, rMax = -0.41495, iMin = 0.5063, iMax = 0.7196)
-//  val g = new Grid(rPixels = 1300, rMin = -1.0704, rMax = -0.41495, iMin = 0.4063, iMax = 0.8596)
   val g = Grid(rPixels = 1000)
-//  val g = Grid(rPixels = 1300, -0.566492093858939, -0.5664917813160236, 0.677928752350595, 0.6779289685008787)
-
-  val mirrorGate = true
-  val mirror = mirrorGate && g.iMin == 0
-
-  val imgYPixels = if (mirror) g.iPixels * 2 else g.iPixels
-
   val startingMandelImg = MandelImage.fromGrid(g)
+
   val imgFrame = new JFrame()
   val lbl = new JLabel
   val zoomOutButton = new JButton("zoom out")
@@ -88,7 +71,6 @@ object Mandelbrot extends App {
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
   val date = new Date()
-  val saveDirPath = s"$workLaptopDir/${dateFormat.format(date)}"
   val saveNum = new AtomicInteger(1)
   var lastSavePath: Option[String] = None
 
@@ -222,7 +204,4 @@ object Mandelbrot extends App {
     infoBufferWriter.write(writeableColors.toString)
     infoBufferWriter.close()
   }
-
-//  val outputFile = new File(s"$personalLaptopDir/manycolor1.png")
-//  ImageIO.write(img, "png", outputFile)
 }
